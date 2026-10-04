@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#10072b">
+  <title>Na Ordem!</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=1.0.0">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
+</head>
+<body>
+<main class="app-shell">
+  <section id="home-screen" class="screen active home-screen">
+    <div class="home-stage card">
+      <div class="home-lights" aria-hidden="true"></div>
+      <div class="home-center-panel" aria-hidden="true"></div>
+      <div class="game-logo" aria-label="Na Ordem!">
+        <span class="logo-small">NA</span><span class="logo-big">ORDEM!</span>
+      </div>
+      <p class="home-tagline">Vocês se conhecem tão bem quanto imaginam?</p>
+
+      <div class="home-player-entry">
+        <label for="join-code">CÓDIGO DA PARTIDA</label>
+        <div class="code-entry-row">
+          <input id="join-code" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="000000" aria-label="Código da partida">
+          <button id="join-code-button" class="primary-button" type="button">ENTRAR</button>
+        </div>
+        <div id="home-error" class="notice error hidden"></div>
+      </div>
+
+      <div class="home-divider"><span>OU</span></div>
+      <button id="create-room-home" class="host-button" type="button"><span>★</span> CRIAR PARTIDA COMO HOST</button>
+    </div>
+  </section>
+
+  <section id="host-setup-screen" class="screen stage-screen">
+    <div class="stage-shell card compact-shell">
+      <header class="stage-header">
+        <button class="back-button" data-go-home type="button">←</button>
+        <div><p class="eyebrow">NOVA PARTIDA</p><h1>CONFIGURAR PARTIDA</h1></div>
+        <span class="header-chip">HOST</span>
+      </header>
+      <div class="center-content setup-content">
+        <div class="setup-icon"><img src="assets/icons/timer.png" alt=""></div>
+        <h2>Tempo para responder</h2>
+        <p>Quanto tempo cada jogador terá para colocar seu número?</p>
+        <div class="time-picker">
+          <button type="button" data-time="15">15s</button>
+          <button type="button" data-time="30" class="active">30s</button>
+          <button type="button" data-time="45">45s</button>
+          <button type="button" data-time="60">60s</button>
+        </div>
+        <button id="create-room-button" class="primary-button big-button" type="button"><span>▶</span> CRIAR PARTIDA</button>
+        <div id="setup-error" class="notice error hidden"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="host-lobby-screen" class="screen stage-screen">
+    <div class="stage-shell card host-layout-shell">
+      <header class="stage-header lobby-header">
+        <button class="back-button" id="close-room-button" type="button">←</button>
+        <div><p class="eyebrow">SALA ABERTA</p><h1>AGUARDANDO JOGADORES</h1></div>
+        <div class="room-code-box"><span>CÓDIGO</span><strong id="host-room-code">------</strong></div>
+      </header>
+      <div class="host-lobby-grid">
+        <aside class="lobby-info-panel">
+          <div class="info-card"><span class="info-label">COMO ENTRAR</span><strong>Abra o jogo no celular</strong><p>Digite o código acima, escolha seu nome e sua cor.</p></div>
+          <div class="info-card mini"><span class="info-label">TEMPO</span><strong id="lobby-time">30s</strong><p>por resposta</p></div>
+          <button id="start-match-button" class="primary-button big-button" type="button" disabled><span>▶</span> COMEÇAR</button>
+          <small id="lobby-min-message">Entre pelo menos 2 jogadores.</small>
+        </aside>
+        <div class="players-panel">
+          <div class="panel-title"><img src="assets/icons/teams.png" alt=""><div><span>JOGADORES NA SALA</span><strong id="player-count">0 jogadores</strong></div></div>
+          <div id="host-player-list" class="host-player-list empty-state"><p>Os jogadores aparecerão aqui.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="host-theme-screen" class="screen stage-screen">
+    <div class="stage-shell card theme-stage">
+      <header class="stage-header">
+        <div class="round-chip">CARTA <strong id="host-round-number">1</strong></div>
+        <div><p class="eyebrow">ESCOLHA O TEMA</p><h1>ESSA VAI DAR DISCUSSÃO...</h1></div>
+        <span class="header-chip">HOST</span>
+      </header>
+      <div class="theme-content">
+        <div class="theme-card">
+          <span class="theme-card-label">TEMA</span>
+          <h2 id="host-theme-text">Carregando tema...</h2>
+        </div>
+        <div class="theme-actions">
+          <button id="skip-theme-button" class="secondary-button big-button" type="button">↻ PULAR TEMA</button>
+          <button id="play-theme-button" class="primary-button big-button" type="button"><span>▶</span> JOGAR ESSA!</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="host-answering-screen" class="screen stage-screen">
+    <div class="stage-shell card answering-stage">
+      <header class="stage-header">
+        <div class="round-chip">CARTA <strong id="answer-round-number">1</strong></div>
+        <div><p class="eyebrow">RESPONDENDO</p><h1 id="answering-theme">Tema</h1></div>
+        <div class="timer-pill"><img src="assets/icons/timer.png" alt=""><strong id="host-timer">30</strong><span>s</span></div>
+      </header>
+      <div class="answering-content">
+        <h2>Quem já respondeu?</h2>
+        <p>Os números continuam secretos até a revelação.</p>
+        <div id="answer-status-grid" class="answer-status-grid"></div>
+        <button id="finish-answers-button" class="secondary-button" type="button">ENCERRAR RESPOSTAS AGORA</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="host-ordering-screen" class="screen stage-screen">
+    <div class="stage-shell card ordering-stage">
+      <header class="stage-header">
+        <div class="round-chip">CARTA <strong id="order-round-number">1</strong></div>
+        <div><p class="eyebrow">MENOR → MAIOR</p><h1>ORGANIZEM AS CARTAS</h1></div>
+        <span class="header-chip">ARRASTE</span>
+      </header>
+      <div class="ordering-content">
+        <div class="ordering-theme" id="ordering-theme">Tema</div>
+        <p class="ordering-help">Arraste os jogadores para a ordem que vocês acham correta. Os números ainda estão escondidos.</p>
+        <div id="sortable-player-cards" class="sortable-player-cards"></div>
+        <div id="missing-answer-note" class="missing-answer-note hidden"></div>
+        <button id="reveal-button" class="primary-button reveal-button" type="button">✨ REVELAR</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="host-result-screen" class="screen stage-screen result-screen">
+    <div class="stage-shell card result-stage">
+      <header class="stage-header result-header">
+        <div class="round-chip">CARTA <strong id="result-round-number">1</strong></div>
+        <div><p class="eyebrow">RESULTADO</p><h1 id="result-headline">VAMOS REVELAR!</h1></div>
+        <span id="result-badge" class="header-chip">...</span>
+      </header>
+      <div class="result-content">
+        <div class="ordering-theme" id="result-theme">Tema</div>
+        <div id="result-player-cards" class="sortable-player-cards result-cards"></div>
+        <div id="result-message" class="result-message hidden"></div>
+        <button id="next-card-button" class="primary-button reveal-button hidden" type="button">NOVA CARTA →</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="player-profile-screen" class="screen player-screen">
+    <div class="player-shell">
+      <div class="player-logo"><span>NA</span><strong>ORDEM!</strong></div>
+      <div class="mobile-card">
+        <p class="eyebrow">ENTRAR NA PARTIDA</p>
+        <h1>Quem é você?</h1>
+        <div class="joined-code">Sala <strong id="player-room-code">------</strong></div>
+        <label class="field-label" for="player-name">SEU NOME</label>
+        <input id="player-name" class="mobile-input" maxlength="24" autocomplete="off" placeholder="Digite seu nome">
+        <span class="field-label">SUA COR</span>
+        <div id="player-color-grid" class="color-grid"></div>
+        <button id="join-room-button" class="primary-button mobile-primary" type="button">ENTRAR NA SALA</button>
+        <div id="player-profile-error" class="notice error hidden"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="player-wait-screen" class="screen player-screen">
+    <div class="player-shell waiting-player-shell">
+      <div class="player-logo"><span>NA</span><strong>ORDEM!</strong></div>
+      <div class="mobile-card waiting-card">
+        <div id="player-avatar" class="player-avatar">J</div>
+        <h1 id="waiting-player-name">Jogador</h1>
+        <div class="waiting-pulse"><span></span><span></span><span></span></div>
+        <h2 id="player-wait-title">Aguardando o host</h2>
+        <p id="player-wait-copy">Assim que a partida começar, seu tema aparecerá aqui.</p>
+        <div id="lobby-edit-box" class="lobby-edit-box">
+          <button id="edit-player-button" class="secondary-button" type="button">✎ EDITAR NOME E COR</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="player-answer-screen" class="screen player-screen answer-player-screen">
+    <div class="player-shell">
+      <div class="mobile-card answer-mobile-card">
+        <div class="mobile-timer"><span>TEMPO</span><strong id="player-timer">30</strong><b>s</b></div>
+        <p class="eyebrow">QUAL É O SEU NÚMERO?</p>
+        <h1 id="player-theme-text">Tema</h1>
+        <input id="player-answer-input" class="answer-input" inputmode="decimal" autocomplete="off" placeholder="0">
+        <button id="submit-answer-button" class="primary-button mobile-primary" type="button">ENVIAR RESPOSTA</button>
+        <div id="player-answer-error" class="notice error hidden"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="player-submitted-screen" class="screen player-screen">
+    <div class="player-shell waiting-player-shell">
+      <div class="mobile-card waiting-card submitted-card">
+        <div class="success-check">✓</div>
+        <h1>Resposta enviada!</h1>
+        <p>Seu número está guardado. Agora conversem e tentem acertar a ordem na tela principal.</p>
+        <div class="watch-host">👀 Veja o resultado no dispositivo do host</div>
+      </div>
+    </div>
+  </section>
+
+  <div id="toast" class="toast hidden"></div>
+</main>
+<script src="app.js?v=1.0.0"></script>
+</body>
+</html>
