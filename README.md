@@ -1,62 +1,40 @@
-# Na Ordem! — v1.0.0
+# Na Ordem! — v1.1.1
 
 Party game multiplayer inspirado na mesma linguagem visual do Mimicou.
 
-## Antes do primeiro teste
+## Atualização do Supabase para v1.1.1
 
-1. Abra seu projeto **Mimicou** no Supabase.
-2. Vá em **SQL Editor > New query**.
-3. Abra o arquivo `supabase_setup.sql` deste projeto.
-4. Copie todo o conteúdo, cole no SQL Editor e clique em **Run**.
-5. O script cria somente tabelas com prefixo `order_`, então não interfere nas tabelas do Mimicou.
+O banco existente continua sendo utilizado. Não é necessário recriar as tabelas.
 
-## Testar localmente no computador
-
-No Windows, dê dois cliques em `INICIAR_LOCAL.bat`.
-
-O navegador abrirá em:
-
-`http://localhost:5500`
-
-## Testar com celulares
-
-O host e os celulares precisam estar na mesma rede Wi-Fi.
-
-Ao abrir `INICIAR_LOCAL.bat`, ele mostra o IPv4 do computador. Exemplo:
-
-`192.168.0.15`
-
-No celular, abra:
-
-`http://192.168.0.15:5500`
-
-Se o Windows perguntar sobre acesso à rede para o Python, permita em **Redes privadas**.
+A configuração atual do Supabase deve manter as migrações já aplicadas nas versões anteriores. A v3.0 não exige nenhuma nova alteração de banco de dados.
 
 ## Fluxo
 
 ### Host — PC/tablet horizontal
 - Criar partida.
-- Escolher tempo de resposta.
-- Compartilhar o código de 6 dígitos.
-- Ver jogadores entrando em tempo real.
-- Expulsar jogadores no lobby.
-- Iniciar a partida.
+- Escolher o tempo de resposta em passos de 30 segundos, sem limite máximo no jogo, ou usar tempo infinito.
+- Compartilhar o código de 6 dígitos, que permanece visível durante toda a partida.
+- Ver jogadores entrando em tempo real, inclusive depois que a partida já começou.
+- Iniciar a partida e acompanhar a sugestão de carta sincronizada com os celulares.
 - Pular/aceitar temas.
-- Acompanhar quem respondeu sem ver os números.
+- Acompanhar quem respondeu sem ver os números; quando todos os jogadores elegíveis respondem, a etapa encerra automaticamente.
 - Arrastar as cartas do menor para o maior.
 - Revelar os números e ver se a ordem estava correta.
-- Jogar uma nova carta.
+- Jogar uma nova carta ou encerrar a partida para todos.
 
 ### Player — celular
 - Digitar o código da sala.
-- Escolher nome e cor.
-- Aguardar o host.
-- Responder somente quando a carta começar.
-- Acompanhar ordenação e resultado na tela do host.
+- Escolher nome e cor; cores podem ser repetidas entre jogadores.
+- Entrar mesmo com uma partida em andamento.
+- Se a etapa de respostas já tiver terminado, aguardar a próxima carta.
+- Acompanhar a sugestão de carta enquanto o host decide qual jogar.
+- Ver a frase da carta durante a rodada e o resultado de vitória/derrota no próprio aparelho.
+- Usar **Sair da partida** a qualquer momento para encerrar sua participação e limpar a sessão local.
+- Ao apenas bloquear a tela, minimizar o navegador ou perder conexão temporariamente, a sessão continua sendo restaurada automaticamente.
 
 ## Supabase
 
-Este projeto usa o mesmo projeto Supabase do Mimicou, mas com tabelas independentes:
+Este projeto usa as tabelas:
 
 - `order_themes`
 - `order_rooms`
@@ -65,3 +43,19 @@ Este projeto usa o mesmo projeto Supabase do Mimicou, mas com tabelas independen
 - `order_answers`
 
 A URL e a chave pública do Supabase já estão configuradas em `app.js`.
+
+
+## Entrada por QR Code (v2.3.2)
+
+- O Host exibe um QR Code da sala no lobby e também junto ao código durante a partida.
+- O QR Code é gerado com a URL atual do jogo e o parâmetro `?room=CODIGO`.
+- Ao escanear, o jogador entra diretamente no fluxo daquela sala e só precisa informar nome e cor.
+- A entrada por QR segue as mesmas regras de entrada tardia: se a etapa de respostas da carta atual já terminou, o novo jogador aguarda a próxima carta.
+- Não é necessária nenhuma alteração adicional no Supabase para usar o QR Code.
+
+
+## v3.0 — Modo Couch
+
+Além do modo online, o jogo agora possui **Modo Couch**, pensado para jogar no mesmo dispositivo. O host configura o tempo, cadastra nome e cor de cada participante, escolhe a carta e o aparelho passa de jogador em jogador para as respostas secretas. Cada resposta exige confirmação antes de avançar. Depois que todos respondem (ou o tempo individual termina), a partida usa a mesma tela de ordenação e revelação do modo online.
+
+O Modo Couch é local e não exige novas tabelas ou colunas no Supabase.

@@ -8,9 +8,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=1.0.0">
+  <link rel="stylesheet" href="styles.css?v=3.0.0">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body>
 <main class="app-shell">
@@ -34,6 +35,42 @@
 
       <div class="home-divider"><span>OU</span></div>
       <button id="create-room-home" class="host-button" type="button"><span>★</span> CRIAR PARTIDA COMO HOST</button>
+      <button id="create-couch-home" class="host-button couch-home-button" type="button"><span>▣</span> JOGAR NO MESMO DISPOSITIVO</button>
+    </div>
+  </section>
+
+  <section id="couch-setup-screen" class="screen stage-screen">
+    <div class="stage-shell card couch-setup-shell">
+      <header class="stage-header">
+        <button class="back-button" data-go-home type="button">←</button>
+        <div><p class="eyebrow">MODO COUCH</p><h1>CONFIGURAR PARTIDA</h1></div>
+        <span class="header-chip">1 DISPOSITIVO</span>
+      </header>
+      <div class="couch-setup-content">
+        <section class="couch-config-panel">
+          <div class="setup-icon"><img src="assets/icons/timer.png" alt=""></div>
+          <h2>Tempo por jogador</h2>
+          <p>Cada pessoa terá esse tempo para colocar e confirmar seu número.</p>
+          <div class="time-stepper" aria-label="Tempo de resposta no modo couch">
+            <button id="couch-time-minus" class="time-step-button" type="button" aria-label="Diminuir 30 segundos">−</button>
+            <button id="couch-time-value-button" class="time-value-button" type="button" aria-label="Alternar tempo infinito">
+              <strong id="couch-time-value">30s</strong>
+              <span>toque para deixar infinito</span>
+            </button>
+            <button id="couch-time-plus" class="time-step-button" type="button" aria-label="Aumentar 30 segundos">+</button>
+          </div>
+          <button id="couch-time-infinite" class="secondary-button infinite-time-button" type="button">∞ TEMPO INFINITO</button>
+        </section>
+        <section class="couch-players-panel">
+          <div class="couch-players-heading">
+            <div><p class="eyebrow">PARTICIPANTES</p><h2>Quem vai jogar?</h2></div>
+            <button id="couch-add-player" class="secondary-button" type="button">＋ ADICIONAR</button>
+          </div>
+          <div id="couch-player-editor" class="couch-player-editor"></div>
+          <div id="couch-setup-error" class="notice error hidden"></div>
+          <button id="start-couch-button" class="primary-button big-button couch-start-button" type="button"><span>▶</span> COMEÇAR PARTIDA</button>
+        </section>
+      </div>
     </div>
   </section>
 
@@ -48,12 +85,15 @@
         <div class="setup-icon"><img src="assets/icons/timer.png" alt=""></div>
         <h2>Tempo para responder</h2>
         <p>Quanto tempo cada jogador terá para colocar seu número?</p>
-        <div class="time-picker">
-          <button type="button" data-time="15">15s</button>
-          <button type="button" data-time="30" class="active">30s</button>
-          <button type="button" data-time="45">45s</button>
-          <button type="button" data-time="60">60s</button>
+        <div class="time-stepper" aria-label="Tempo de resposta">
+          <button id="time-minus-button" class="time-step-button" type="button" aria-label="Diminuir 30 segundos">−</button>
+          <button id="time-value-button" class="time-value-button" type="button" aria-label="Alternar tempo infinito">
+            <strong id="setup-time-value">30s</strong>
+            <span>toque para deixar infinito</span>
+          </button>
+          <button id="time-plus-button" class="time-step-button" type="button" aria-label="Aumentar 30 segundos">+</button>
         </div>
+        <button id="time-infinite-button" class="secondary-button infinite-time-button" type="button">∞ TEMPO INFINITO</button>
         <button id="create-room-button" class="primary-button big-button" type="button"><span>▶</span> CRIAR PARTIDA</button>
         <div id="setup-error" class="notice error hidden"></div>
       </div>
@@ -65,11 +105,11 @@
       <header class="stage-header lobby-header">
         <button class="back-button" id="close-room-button" type="button">←</button>
         <div><p class="eyebrow">SALA ABERTA</p><h1>AGUARDANDO JOGADORES</h1></div>
-        <div class="room-code-box"><span>CÓDIGO</span><strong id="host-room-code">------</strong></div>
+        <div class="host-join-header"><div class="room-code-box"><span>CÓDIGO</span><strong id="host-room-code">------</strong></div></div>
       </header>
       <div class="host-lobby-grid">
         <aside class="lobby-info-panel">
-          <div class="info-card"><span class="info-label">COMO ENTRAR</span><strong>Abra o jogo no celular</strong><p>Digite o código acima, escolha seu nome e sua cor.</p></div>
+          <div class="info-card qr-info-card"><span class="info-label">ENTRE PELO QR CODE</span><div class="lobby-qr" data-room-qr data-qr-size="154" aria-label="QR Code para entrar na partida"></div><strong>Escaneie com o celular</strong><p>O jogo abre direto nesta sala. Depois é só escolher seu nome e sua cor.</p><div class="qr-code-fallback">Código: <b data-room-code-display>------</b></div></div>
           <div class="info-card mini"><span class="info-label">TEMPO</span><strong id="lobby-time">30s</strong><p>por resposta</p></div>
           <button id="start-match-button" class="primary-button big-button" type="button" disabled><span>▶</span> COMEÇAR</button>
           <small id="lobby-min-message">Entre pelo menos 2 jogadores.</small>
@@ -87,7 +127,7 @@
       <header class="stage-header">
         <div class="round-chip">CARTA <strong id="host-round-number">1</strong></div>
         <div><p class="eyebrow">ESCOLHA O TEMA</p><h1>ESSA VAI DAR DISCUSSÃO...</h1></div>
-        <span class="header-chip">HOST</span>
+        <div class="compact-join-box"><div class="room-code-box compact-room-code"><span>CÓDIGO</span><strong data-room-code-display>------</strong></div><div class="header-qr compact-qr" data-room-qr data-qr-size="52" aria-label="QR Code para entrar na partida"></div></div>
       </header>
       <div class="theme-content">
         <div class="theme-card">
@@ -95,6 +135,7 @@
           <h2 id="host-theme-text">Carregando tema...</h2>
         </div>
         <div class="theme-actions">
+          <button id="end-match-theme-button" class="secondary-button danger-button big-button" type="button">■ ENCERRAR PARTIDA</button>
           <button id="skip-theme-button" class="secondary-button big-button" type="button">↻ PULAR TEMA</button>
           <button id="play-theme-button" class="primary-button big-button" type="button"><span>▶</span> JOGAR ESSA!</button>
         </div>
@@ -107,7 +148,10 @@
       <header class="stage-header">
         <div class="round-chip">CARTA <strong id="answer-round-number">1</strong></div>
         <div><p class="eyebrow">RESPONDENDO</p><h1 id="answering-theme">Tema</h1></div>
-        <div class="timer-pill"><img src="assets/icons/timer.png" alt=""><strong id="host-timer">30</strong><span>s</span></div>
+        <div class="stage-header-actions">
+          <div class="compact-join-box"><div class="room-code-box compact-room-code"><span>CÓDIGO</span><strong data-room-code-display>------</strong></div><div class="header-qr compact-qr" data-room-qr data-qr-size="52" aria-label="QR Code para entrar na partida"></div></div>
+          <div class="timer-pill"><img src="assets/icons/timer.png" alt=""><strong id="host-timer">30</strong><span id="host-timer-unit">s</span></div>
+        </div>
       </header>
       <div class="answering-content">
         <h2>Quem já respondeu?</h2>
@@ -123,7 +167,10 @@
       <header class="stage-header">
         <div class="round-chip">CARTA <strong id="order-round-number">1</strong></div>
         <div><p class="eyebrow">MENOR → MAIOR</p><h1>ORGANIZEM AS CARTAS</h1></div>
-        <span class="header-chip">ARRASTE</span>
+        <div class="stage-header-actions">
+          <span class="header-chip">ARRASTE</span>
+          <div class="compact-join-box"><div class="room-code-box compact-room-code"><span>CÓDIGO</span><strong data-room-code-display>------</strong></div><div class="header-qr compact-qr" data-room-qr data-qr-size="52" aria-label="QR Code para entrar na partida"></div></div>
+        </div>
       </header>
       <div class="ordering-content">
         <div class="ordering-theme" id="ordering-theme">Tema</div>
@@ -140,16 +187,55 @@
       <header class="stage-header result-header">
         <div class="round-chip">CARTA <strong id="result-round-number">1</strong></div>
         <div><p class="eyebrow">RESULTADO</p><h1 id="result-headline">VAMOS REVELAR!</h1></div>
-        <span id="result-badge" class="header-chip">...</span>
+        <div class="stage-header-actions">
+          <span id="result-badge" class="header-chip">...</span>
+          <div class="compact-join-box"><div class="room-code-box compact-room-code"><span>CÓDIGO</span><strong data-room-code-display>------</strong></div><div class="header-qr compact-qr" data-room-qr data-qr-size="52" aria-label="QR Code para entrar na partida"></div></div>
+        </div>
       </header>
       <div class="result-content">
         <div class="ordering-theme" id="result-theme">Tema</div>
         <div id="result-player-cards" class="sortable-player-cards result-cards"></div>
         <div id="result-message" class="result-message hidden"></div>
-        <button id="next-card-button" class="primary-button reveal-button hidden" type="button">NOVA CARTA →</button>
+        <div id="result-actions" class="result-actions hidden">
+          <button id="end-match-result-button" class="secondary-button danger-button" type="button">■ ENCERRAR PARTIDA</button>
+          <button id="next-card-button" class="primary-button" type="button">NOVA CARTA →</button>
+        </div>
       </div>
     </div>
   </section>
+
+  <section id="couch-turn-screen" class="screen stage-screen">
+    <div class="stage-shell card couch-turn-stage">
+      <header class="stage-header">
+        <div class="round-chip">CARTA <strong id="couch-round-number">1</strong></div>
+        <div><p class="eyebrow">SUA VEZ</p><h1 id="couch-theme-text">Tema</h1></div>
+        <div class="timer-pill"><img src="assets/icons/timer.png" alt=""><strong id="couch-turn-timer">30</strong><span id="couch-turn-timer-unit">s</span></div>
+      </header>
+      <div class="couch-turn-content">
+        <div id="couch-turn-player" class="couch-current-player" style="--player-color:#7854ff">
+          <span class="couch-player-dot"></span>
+          <div><span>AGORA É A VEZ DE</span><strong id="couch-turn-player-name">Jogador</strong></div>
+        </div>
+        <p class="couch-privacy-copy">Passe o dispositivo para essa pessoa. Os outros jogadores não devem ver o número digitado.</p>
+        <input id="couch-answer-input" class="answer-input couch-answer-input" inputmode="decimal" autocomplete="off" placeholder="0">
+        <button id="couch-answer-review" class="primary-button big-button" type="button">CONFIRMAR RESPOSTA</button>
+        <div id="couch-answer-error" class="notice error hidden"></div>
+      </div>
+    </div>
+  </section>
+
+  <div id="couch-confirm-overlay" class="couch-confirm-overlay hidden" role="dialog" aria-modal="true">
+    <div class="couch-confirm-card">
+      <p class="eyebrow">CONFIRME SUA RESPOSTA</p>
+      <h2 id="couch-confirm-player-name">Jogador</h2>
+      <div id="couch-confirm-value" class="couch-confirm-value">0</div>
+      <p>Depois de confirmar, sua resposta fica escondida e o dispositivo passa para o próximo jogador.</p>
+      <div class="couch-confirm-actions">
+        <button id="couch-confirm-back" class="secondary-button" type="button">← CORRIGIR</button>
+        <button id="couch-confirm-submit" class="primary-button" type="button">✓ CONFIRMAR</button>
+      </div>
+    </div>
+  </div>
 
   <section id="player-profile-screen" class="screen player-screen">
     <div class="player-shell">
@@ -177,6 +263,10 @@
         <div class="waiting-pulse"><span></span><span></span><span></span></div>
         <h2 id="player-wait-title">Aguardando o host</h2>
         <p id="player-wait-copy">Assim que a partida começar, seu tema aparecerá aqui.</p>
+        <div id="player-wait-theme" class="player-theme-preview hidden">
+          <span id="player-wait-theme-label">CARTA ATUAL</span>
+          <strong id="player-wait-theme-text">Tema</strong>
+        </div>
         <div id="lobby-edit-box" class="lobby-edit-box">
           <button id="edit-player-button" class="secondary-button" type="button">✎ EDITAR NOME E COR</button>
         </div>
@@ -202,14 +292,36 @@
       <div class="mobile-card waiting-card submitted-card">
         <div class="success-check">✓</div>
         <h1>Resposta enviada!</h1>
+        <div class="player-theme-preview submitted-theme">
+          <span>CARTA ATUAL</span>
+          <strong id="player-submitted-theme-text">Tema</strong>
+        </div>
         <p>Seu número está guardado. Agora conversem e tentem acertar a ordem na tela principal.</p>
         <div class="watch-host">👀 Veja o resultado no dispositivo do host</div>
       </div>
     </div>
   </section>
 
+
+  <section id="player-result-screen" class="screen player-screen">
+    <div class="player-shell waiting-player-shell">
+      <div class="mobile-card waiting-card player-result-card">
+        <div id="player-result-icon" class="player-result-icon">🏆</div>
+        <p class="eyebrow">RESULTADO DA CARTA</p>
+        <h1 id="player-result-title">Vocês venceram!</h1>
+        <div class="player-theme-preview result-theme-preview">
+          <span>CARTA</span>
+          <strong id="player-result-theme-text">Tema</strong>
+        </div>
+        <p id="player-result-copy">A ordem ficou perfeita. Boa!</p>
+        <div class="watch-host">A próxima carta começa pelo host</div>
+      </div>
+    </div>
+  </section>
+
+  <button id="player-leave-button" class="player-leave-button hidden" type="button">SAIR DA PARTIDA</button>
   <div id="toast" class="toast hidden"></div>
 </main>
-<script src="app.js?v=1.0.0"></script>
+<script src="app.js?v=3.0.0"></script>
 </body>
 </html>
