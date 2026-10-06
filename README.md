@@ -59,3 +59,8 @@ A URL e a chave pública do Supabase já estão configuradas em `app.js`.
 Além do modo online, o jogo agora possui **Modo Couch**, pensado para jogar no mesmo dispositivo. O host configura o tempo, cadastra nome e cor de cada participante, escolhe a carta e o aparelho passa de jogador em jogador para as respostas secretas. Cada resposta exige confirmação antes de avançar. Depois que todos respondem (ou o tempo individual termina), a partida usa a mesma tela de ordenação e revelação do modo online.
 
 O Modo Couch é local e não exige novas tabelas ou colunas no Supabase.
+
+
+## v3.0.2
+
+Refinamento visual da Home: nova logo, novo background, espaçamento dos botões e ícones vetoriais.

@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=3.0.0">
+  <link rel="stylesheet" href="styles.css?v=3.1.0">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -20,7 +20,7 @@
       <div class="home-lights" aria-hidden="true"></div>
       <div class="home-center-panel" aria-hidden="true"></div>
       <div class="game-logo" aria-label="Na Ordem!">
-        <span class="logo-small">NA</span><span class="logo-big">ORDEM!</span>
+        <img src="assets/images/na-ordem-logo-v3.png" alt="Na Ordem!">
       </div>
       <p class="home-tagline">Vocês se conhecem tão bem quanto imaginam?</p>
 
@@ -34,8 +34,16 @@
       </div>
 
       <div class="home-divider"><span>OU</span></div>
-      <button id="create-room-home" class="host-button" type="button"><span>★</span> CRIAR PARTIDA COMO HOST</button>
-      <button id="create-couch-home" class="host-button couch-home-button" type="button"><span>▣</span> JOGAR NO MESMO DISPOSITIVO</button>
+      <div class="home-mode-actions">
+        <button id="create-room-home" class="host-button home-mode-button" type="button">
+          <svg class="home-action-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8.5 7.4 11 12 5l4.6 6L20 8.5 18.3 17H5.7L4 8.5Z"/><path d="M7 19h10"/></svg>
+          <span class="home-button-label">CRIAR PARTIDA COMO HOST</span>
+        </button>
+        <button id="create-couch-home" class="host-button couch-home-button home-mode-button" type="button">
+          <svg class="home-action-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="11" rx="2"/><path d="M9 20h6M12 16v4"/><circle cx="9" cy="10.5" r="1.3"/><circle cx="15" cy="10.5" r="1.3"/></svg>
+          <span class="home-button-label">JOGAR NO MESMO DISPOSITIVO</span>
+        </button>
+      </div>
     </div>
   </section>
 
@@ -59,7 +67,7 @@
             </button>
             <button id="couch-time-plus" class="time-step-button" type="button" aria-label="Aumentar 30 segundos">+</button>
           </div>
-          <button id="couch-time-infinite" class="secondary-button infinite-time-button" type="button">∞ TEMPO INFINITO</button>
+          <button id="couch-time-infinite" class="secondary-button infinite-time-button" type="button">TEMPO INFINITO</button>
         </section>
         <section class="couch-players-panel">
           <div class="couch-players-heading">
@@ -93,7 +101,7 @@
           </button>
           <button id="time-plus-button" class="time-step-button" type="button" aria-label="Aumentar 30 segundos">+</button>
         </div>
-        <button id="time-infinite-button" class="secondary-button infinite-time-button" type="button">∞ TEMPO INFINITO</button>
+        <button id="time-infinite-button" class="secondary-button infinite-time-button" type="button">TEMPO INFINITO</button>
         <button id="create-room-button" class="primary-button big-button" type="button"><span>▶</span> CRIAR PARTIDA</button>
         <div id="setup-error" class="notice error hidden"></div>
       </div>
@@ -109,8 +117,8 @@
       </header>
       <div class="host-lobby-grid">
         <aside class="lobby-info-panel">
-          <div class="info-card qr-info-card"><span class="info-label">ENTRE PELO QR CODE</span><div class="lobby-qr" data-room-qr data-qr-size="154" aria-label="QR Code para entrar na partida"></div><strong>Escaneie com o celular</strong><p>O jogo abre direto nesta sala. Depois é só escolher seu nome e sua cor.</p><div class="qr-code-fallback">Código: <b data-room-code-display>------</b></div></div>
-          <div class="info-card mini"><span class="info-label">TEMPO</span><strong id="lobby-time">30s</strong><p>por resposta</p></div>
+          <div class="info-card qr-info-card"><div class="lobby-qr" data-room-qr data-qr-size="180" aria-label="QR Code para entrar na partida"></div><button id="share-room-button" class="share-room-button" type="button" aria-label="Compartilhar link da sala" title="Compartilhar link da sala"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a3 3 0 1 0-2.83-4A3 3 0 0 0 15 5c0 .2.02.39.06.57L8.91 9.08A3 3 0 1 0 9 14.92l6.06 3.51A3 3 0 0 0 15 19a3 3 0 1 0 .91-2.15L9.85 13.34A3.1 3.1 0 0 0 10 12c0-.46-.1-.9-.29-1.3l6.13-3.5A3 3 0 0 0 18 8Z"/></svg></button></div>
+          <div class="info-card mini lobby-time-card"><span class="info-label">TEMPO</span><strong id="lobby-time">30s</strong></div>
           <button id="start-match-button" class="primary-button big-button" type="button" disabled><span>▶</span> COMEÇAR</button>
           <small id="lobby-min-message">Entre pelo menos 2 jogadores.</small>
         </aside>
@@ -322,6 +330,6 @@
   <button id="player-leave-button" class="player-leave-button hidden" type="button">SAIR DA PARTIDA</button>
   <div id="toast" class="toast hidden"></div>
 </main>
-<script src="app.js?v=3.0.0"></script>
+<script src="app.js?v=3.1.0"></script>
 </body>
 </html>

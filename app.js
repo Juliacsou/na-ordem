@@ -107,6 +107,35 @@
     renderRoomQRCodes();
   }
 
+  async function shareRoomLink(){
+    if(!state.room?.code) return;
+    const url=roomJoinUrl(state.room.code);
+    const isTouchDevice=window.matchMedia?.('(pointer: coarse)').matches || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    if(isTouchDevice && typeof navigator.share==='function'){
+      try{
+        await navigator.share({title:'Na Ordem!',text:'Entre na minha sala do Na Ordem!',url});
+        return;
+      }catch(err){
+        if(err?.name==='AbortError') return;
+      }
+    }
+    try{
+      await navigator.clipboard.writeText(url);
+      toast('Link da sala copiado!',1800);
+    }catch(_){
+      const ta=document.createElement('textarea');
+      ta.value=url;
+      ta.setAttribute('readonly','');
+      ta.style.position='fixed';
+      ta.style.opacity='0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      ta.remove();
+      toast('Link da sala copiado!',1800);
+    }
+  }
+
   function savePlayerSession(){
     if(!state.room?.id || !state.room?.code || !state.player?.id || !state.playerToken) return;
     try{
@@ -218,7 +247,9 @@
 
   function renderHostLobby(){
     $('host-room-code').textContent=state.room.code;
-    $('lobby-time').textContent=responseTimeLabel(state.room.response_seconds,state.room.response_infinite);
+    const lobbyTime=$('lobby-time');
+    lobbyTime.textContent=responseTimeLabel(state.room.response_seconds,state.room.response_infinite);
+    lobbyTime.classList.toggle('infinite-time-icon',Boolean(state.room.response_infinite));
     updateRoomCodeDisplays();
     renderLobbyPlayers();
   }
@@ -900,6 +931,7 @@
   $('create-room-button').addEventListener('click',createRoom);
   $('close-room-button').addEventListener('click',closeRoom);
   $('start-match-button').addEventListener('click',startMatch);
+  $('share-room-button')?.addEventListener('click',shareRoomLink);
   $('skip-theme-button').addEventListener('click',pickNextTheme);
   $('play-theme-button').addEventListener('click',playSelectedTheme);
   $('finish-answers-button').addEventListener('click',finishAnswers);

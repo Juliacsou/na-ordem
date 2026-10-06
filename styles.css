@@ -89,3 +89,531 @@ button,input{font:inherit}button{cursor:pointer;touch-action:manipulation;-webki
 body.couch-mode .compact-join-box{display:none!important}
 body.couch-mode #finish-answers-button{display:none!important}
 @media(max-width:900px){.couch-setup-content{grid-template-columns:1fr;padding:20px}.couch-player-edit-card{grid-template-columns:36px 1fr 38px}.couch-color-row{grid-column:2/4}.couch-player-editor{max-height:none}}
+
+/* v3.0.1 — backgrounds full-bleed, sem moldura externa */
+.home-screen,
+.stage-screen{
+  padding:0;
+  background:#12063f;
+}
+
+.home-stage,
+.stage-shell,
+.compact-shell{
+  width:100%;
+  max-width:none;
+  height:100%;
+  margin:0;
+  border:0;
+  border-radius:0;
+  box-shadow:none;
+}
+
+
+/* v3.0.2 — refinamento visual da Home */
+.home-stage{
+  background:#12063f url("assets/images/home-gameshow-bg-v3.png") center/cover no-repeat;
+}
+.game-logo{
+  position:relative;
+  z-index:2;
+  width:min(760px,76vw);
+  transform:none;
+  filter:drop-shadow(0 12px 10px rgba(20,4,70,.35));
+}
+.game-logo img{
+  display:block;
+  width:100%;
+  height:auto;
+}
+.home-mode-actions{
+  position:relative;
+  z-index:2;
+  width:min(540px,86vw);
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+}
+.home-mode-button{
+  width:100%;
+  min-height:56px;
+  padding:0 22px;
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+  gap:13px;
+  border-radius:16px;
+  font-size:14px;
+  box-shadow:0 6px 0 #10062d;
+}
+.home-mode-button .home-action-icon{
+  width:24px;
+  height:24px;
+  flex:0 0 24px;
+  fill:none;
+  stroke:#ffd83d;
+  stroke-width:2.2;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+.home-button-label{
+  color:inherit!important;
+  margin:0!important;
+  text-align:left;
+}
+.couch-home-button{
+  margin-top:0;
+  background:#26145e;
+  box-shadow:0 6px 0 #10062d;
+}
+@media(max-width:900px){
+  .game-logo{width:min(600px,88vw)}
+  .home-mode-actions{gap:14px}
+}
+@media(max-width:650px){
+  .game-logo{width:90vw;margin-top:-8px}
+  .home-mode-button{min-height:54px;font-size:12px;padding:0 18px;gap:11px}
+  .home-mode-button .home-action-icon{width:22px;height:22px;flex-basis:22px}
+}
+
+/* v3.0.4 - Infinite time selector visual refinement */
+#time-value-button.infinite strong,
+#couch-time-value-button.infinite strong{
+  font-family:"Baloo 2",sans-serif;
+  font-size:64px;
+  font-weight:1000;
+  line-height:.72;
+  letter-spacing:-.12em;
+  color:#ffd43b;
+  -webkit-text-stroke:3px #351580;
+  paint-order:stroke fill;
+  text-shadow:0 4px 0 #7a2fb4,0 7px 0 #2b146d;
+  transform:scaleX(1.18);
+  transform-origin:center;
+}
+#time-value-button.infinite span,
+#couch-time-value-button.infinite span{
+  display:none;
+}
+
+/* v3.0.5 — lobby: QR limpo + compartilhamento */
+.qr-info-card{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:16px;
+  padding:18px;
+  text-align:center;
+}
+.qr-info-card .lobby-qr{
+  width:196px;
+  height:196px;
+  margin:0;
+  padding:8px;
+  border-radius:20px;
+  background:#fff;
+  box-shadow:0 6px 0 #0b0225;
+}
+.share-room-button{
+  width:58px;
+  height:58px;
+  display:grid;
+  place-items:center;
+  border:2px solid #8a73ef;
+  border-radius:18px;
+  background:linear-gradient(180deg,#342078,#241056);
+  color:#fff;
+  box-shadow:0 5px 0 #0b0225;
+}
+.share-room-button:hover{transform:translateY(-1px)}
+.share-room-button:active{transform:translateY(3px);box-shadow:0 2px 0 #0b0225}
+.share-room-button svg{width:28px;height:28px;fill:currentColor}
+@media(max-width:900px){
+  .qr-info-card .lobby-qr{width:172px;height:172px}
+  .share-room-button{width:54px;height:54px}
+}
+
+
+/* v3.0.6 — lobby time card refinement */
+.lobby-time-card{
+  padding:24px 20px;
+}
+.lobby-time-card .info-label{
+  margin-bottom:10px;
+  font-size:14px;
+  letter-spacing:.14em;
+}
+.lobby-time-card #lobby-time{
+  display:block;
+  font-family:"Baloo 2",sans-serif;
+  font-size:40px;
+  font-weight:1000;
+  line-height:1;
+  color:#fff;
+}
+.lobby-time-card #lobby-time.infinite-time-icon{
+  font-size:64px;
+  line-height:.75;
+  letter-spacing:-.12em;
+  color:#ffd43b;
+  -webkit-text-stroke:3px #351580;
+  paint-order:stroke fill;
+  text-shadow:0 4px 0 #7a2fb4,0 7px 0 #2b146d;
+  transform:scaleX(1.18);
+  transform-origin:center;
+}
+
+/* v3.0.7 — lobby: QR card mais compacto */
+.qr-info-card{
+  width:fit-content;
+  max-width:100%;
+  align-self:center;
+}
+
+/* v3.1.0 — lobby visual overhaul */
+#host-lobby-screen .stage-shell{
+  position:relative;
+  isolation:isolate;
+  background:
+    linear-gradient(180deg,rgba(14,3,50,.18),rgba(14,3,50,.52)),
+    url("assets/images/home-gameshow-bg-v3.png") center/cover no-repeat;
+}
+#host-lobby-screen .stage-shell::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:-1;
+  pointer-events:none;
+  background:
+    radial-gradient(circle at 22% 16%,rgba(54,152,255,.20),transparent 28%),
+    radial-gradient(circle at 78% 24%,rgba(231,44,255,.20),transparent 30%),
+    linear-gradient(180deg,rgba(6,3,32,.05),rgba(14,4,58,.28));
+}
+#host-lobby-screen .stage-header{
+  min-height:104px;
+  padding:14px 28px;
+  background:linear-gradient(180deg,rgba(11,3,43,.78),rgba(17,5,58,.60));
+  backdrop-filter:blur(14px);
+  border-bottom:1px solid rgba(171,131,255,.34);
+  box-shadow:0 10px 28px rgba(4,0,28,.25);
+}
+#host-lobby-screen .stage-header h1{
+  font-size:clamp(32px,3.1vw,48px);
+  text-shadow:0 5px 0 rgba(49,20,126,.9),0 10px 22px rgba(8,1,42,.45);
+}
+#host-lobby-screen .back-button{
+  width:66px;
+  height:66px;
+  border-radius:20px;
+  background:linear-gradient(180deg,#ffda4e,#ffb52e);
+  box-shadow:0 7px 0 #d97d14,0 12px 24px rgba(28,4,74,.38);
+}
+#host-lobby-screen .room-code-box{
+  min-width:176px;
+  padding:10px 22px 8px;
+  border:2px solid rgba(255,255,255,.85);
+  border-radius:22px;
+  background:linear-gradient(180deg,#fff,#f7f1ff);
+  box-shadow:0 7px 0 #c8b6ff,0 12px 28px rgba(19,2,69,.28);
+}
+#host-lobby-screen .room-code-box strong{
+  font-size:34px;
+  line-height:1;
+  color:#2a145f;
+}
+#host-lobby-screen .host-lobby-grid{
+  grid-template-columns:320px minmax(0,1fr);
+  gap:24px;
+  padding:24px 30px 28px;
+}
+#host-lobby-screen .lobby-info-panel{
+  gap:16px;
+}
+#host-lobby-screen .info-card,
+#host-lobby-screen .players-panel{
+  border:2px solid rgba(135,88,255,.72);
+  background:linear-gradient(180deg,rgba(31,11,88,.72),rgba(19,5,64,.62));
+  backdrop-filter:blur(14px) saturate(1.15);
+  box-shadow:0 8px 0 rgba(8,1,33,.55),inset 0 1px 0 rgba(255,255,255,.08);
+}
+#host-lobby-screen .qr-info-card{
+  width:100%;
+  padding:18px 18px 20px;
+  border-radius:26px;
+  gap:17px;
+}
+#host-lobby-screen .qr-info-card .lobby-qr{
+  width:220px;
+  height:220px;
+  padding:10px;
+  border:2px solid rgba(255,255,255,.94);
+  border-radius:22px;
+  background:#fff;
+  box-shadow:0 8px 0 rgba(10,2,45,.75),0 12px 30px rgba(22,4,76,.26);
+}
+#host-lobby-screen .share-room-button{
+  width:64px;
+  height:64px;
+  border:2px solid #9a7dff;
+  border-radius:20px;
+  background:linear-gradient(180deg,#49309b,#291261);
+  box-shadow:0 7px 0 #130534,0 12px 20px rgba(10,2,45,.26);
+}
+#host-lobby-screen .share-room-button svg{width:30px;height:30px}
+#host-lobby-screen .lobby-time-card{
+  position:relative;
+  overflow:hidden;
+  min-height:142px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  border-radius:24px;
+}
+#host-lobby-screen .lobby-time-card::after{
+  content:"";
+  position:absolute;
+  right:-10px;
+  bottom:-14px;
+  width:100px;
+  height:100px;
+  background:url("assets/icons/timer.png") center/contain no-repeat;
+  opacity:.10;
+  filter:saturate(.7) brightness(1.35);
+}
+#host-lobby-screen .lobby-time-card .info-label{
+  position:relative;
+  z-index:1;
+  margin-bottom:8px;
+  font-size:17px;
+  color:#ffdf42;
+}
+#host-lobby-screen .lobby-time-card #lobby-time{
+  position:relative;
+  z-index:1;
+  font-size:58px;
+  line-height:.95;
+  color:#fff;
+  -webkit-text-stroke:1px rgba(67,28,129,.34);
+  text-shadow:0 5px 0 #4f278e,0 9px 18px rgba(7,1,33,.28);
+}
+#host-lobby-screen .lobby-time-card #lobby-time.infinite-time-icon{
+  font-size:78px;
+  color:#ffd43b;
+  -webkit-text-stroke:4px #351580;
+  text-shadow:0 5px 0 #7a2fb4,0 9px 0 #2b146d,0 14px 24px rgba(9,2,40,.35);
+}
+#host-lobby-screen #start-match-button{
+  min-height:70px;
+  border-radius:20px;
+  font-size:22px;
+  background:linear-gradient(180deg,#ffdc4f,#ffb72f);
+  box-shadow:0 8px 0 #df8316,0 12px 22px rgba(9,2,37,.30);
+}
+#host-lobby-screen #start-match-button:disabled{
+  filter:saturate(.25) brightness(.82);
+  opacity:.78;
+}
+#host-lobby-screen #lobby-min-message{
+  font-size:14px;
+  font-weight:900;
+  color:#d8cbed;
+  text-shadow:0 2px 8px rgba(3,0,20,.55);
+}
+#host-lobby-screen .players-panel{
+  position:relative;
+  overflow:hidden;
+  border-radius:30px;
+  padding:22px 26px 24px;
+}
+#host-lobby-screen .players-panel::after{
+  content:"";
+  position:absolute;
+  right:-24px;
+  bottom:-46px;
+  width:min(420px,38vw);
+  aspect-ratio:1;
+  background:url("assets/images/lobby-crowned-player.svg") center/contain no-repeat;
+  opacity:.22;
+  filter:drop-shadow(0 18px 30px rgba(68,21,168,.34));
+  pointer-events:none;
+}
+#host-lobby-screen .panel-title{
+  position:relative;
+  z-index:2;
+  min-height:82px;
+  gap:16px;
+  padding:4px 6px 18px;
+  border-bottom:1px solid rgba(183,151,255,.30);
+}
+#host-lobby-screen .panel-title img{
+  width:48px;
+  filter:drop-shadow(0 4px 10px rgba(4,0,26,.32));
+}
+#host-lobby-screen .panel-title span{
+  color:#ffdd42;
+  font-size:13px;
+  letter-spacing:.15em;
+}
+#host-lobby-screen .panel-title strong{
+  margin-top:2px;
+  font-family:"Baloo 2",sans-serif;
+  font-size:28px;
+  line-height:1;
+  color:#fff;
+}
+#host-lobby-screen .host-player-list{
+  position:relative;
+  z-index:2;
+  grid-template-columns:repeat(2,minmax(260px,1fr));
+  gap:18px;
+  padding:20px 6px;
+}
+#host-lobby-screen .host-player-list.empty-state{
+  position:relative;
+  z-index:2;
+  display:grid;
+  place-items:center;
+  color:#b9acd6;
+  font-size:16px;
+}
+#host-lobby-screen .lobby-player-card{
+  min-height:108px;
+  padding:16px 64px 16px 18px;
+  gap:16px;
+  border:2px solid rgba(255,255,255,.90);
+  border-radius:24px;
+  background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(245,238,255,.96));
+  box-shadow:0 8px 0 rgba(91,53,189,.55),0 14px 24px rgba(8,1,39,.18),inset 0 1px 0 #fff;
+  transition:transform .15s ease,box-shadow .15s ease;
+}
+#host-lobby-screen .lobby-player-card:hover{
+  transform:translateY(-2px);
+  box-shadow:0 10px 0 rgba(91,53,189,.58),0 16px 28px rgba(8,1,39,.22),inset 0 1px 0 #fff;
+}
+#host-lobby-screen .player-color-dot{
+  width:62px;
+  height:62px;
+  flex-basis:62px;
+  border:6px solid rgba(255,255,255,.96);
+  box-shadow:0 0 0 3px rgba(106,70,193,.18),0 6px 14px rgba(14,2,54,.16);
+}
+#host-lobby-screen .lobby-player-card strong{
+  font-family:"Baloo 2",sans-serif;
+  font-size:24px;
+  color:#251452;
+}
+#host-lobby-screen .kick-player{
+  right:13px;
+  top:13px;
+  width:36px;
+  height:36px;
+  border:0;
+  border-radius:12px;
+  background:linear-gradient(180deg,#ff6f8c,#ff3f68);
+  color:#fff;
+  font-size:21px;
+  line-height:1;
+  box-shadow:0 4px 0 #c92b4d;
+}
+#host-lobby-screen .kick-player:hover{transform:translateY(-1px)}
+#host-lobby-screen .kick-player:active{transform:translateY(2px);box-shadow:0 2px 0 #c92b4d}
+
+@media(max-width:1100px){
+  #host-lobby-screen .host-lobby-grid{grid-template-columns:280px 1fr;gap:18px;padding:18px}
+  #host-lobby-screen .qr-info-card .lobby-qr{width:188px;height:188px}
+  #host-lobby-screen .host-player-list{grid-template-columns:1fr}
+  #host-lobby-screen .players-panel::after{width:330px;opacity:.17}
+}
+
+/* v3.1.1 — lobby responsive height refinement */
+@media (max-height: 850px) and (min-width: 651px){
+  #host-lobby-screen.stage-screen{padding:8px 12px}
+  #host-lobby-screen .stage-header{
+    min-height:82px;
+    padding:10px 20px;
+  }
+  #host-lobby-screen .stage-header h1{font-size:clamp(28px,2.6vw,40px)}
+  #host-lobby-screen .back-button{width:58px;height:58px;border-radius:18px}
+  #host-lobby-screen .room-code-box{min-width:158px;padding:8px 18px 7px;border-radius:19px}
+  #host-lobby-screen .room-code-box strong{font-size:30px}
+
+  #host-lobby-screen .host-lobby-grid{
+    grid-template-columns:300px minmax(0,1fr);
+    gap:16px;
+    padding:14px 18px 16px;
+  }
+  #host-lobby-screen .lobby-info-panel{gap:11px;min-height:0}
+  #host-lobby-screen .qr-info-card{
+    padding:12px 14px 14px;
+    border-radius:22px;
+    gap:11px;
+  }
+  #host-lobby-screen .qr-info-card .lobby-qr{
+    width:176px;
+    height:176px;
+    padding:8px;
+    border-radius:18px;
+    box-shadow:0 6px 0 rgba(10,2,45,.72),0 10px 24px rgba(22,4,76,.22);
+  }
+  #host-lobby-screen .share-room-button{
+    width:52px;
+    height:52px;
+    border-radius:17px;
+    box-shadow:0 5px 0 #130534,0 9px 16px rgba(10,2,45,.24);
+  }
+  #host-lobby-screen .share-room-button svg{width:25px;height:25px}
+  #host-lobby-screen .lobby-time-card{
+    min-height:106px;
+    padding:12px 16px;
+    border-radius:21px;
+  }
+  #host-lobby-screen .lobby-time-card::after{width:78px;height:78px;right:-6px;bottom:-10px}
+  #host-lobby-screen .lobby-time-card .info-label{font-size:14px;margin-bottom:5px}
+  #host-lobby-screen .lobby-time-card #lobby-time{font-size:48px}
+  #host-lobby-screen .lobby-time-card #lobby-time.infinite-time-icon{font-size:62px}
+  #host-lobby-screen #start-match-button{min-height:58px;border-radius:18px;font-size:19px;box-shadow:0 6px 0 #df8316,0 10px 18px rgba(9,2,37,.26)}
+  #host-lobby-screen #lobby-min-message{font-size:12px;line-height:1.15}
+
+  #host-lobby-screen .players-panel{padding:16px 20px 18px;border-radius:26px}
+  #host-lobby-screen .panel-title{min-height:68px;padding:2px 4px 12px;gap:13px}
+  #host-lobby-screen .panel-title img{width:40px}
+  #host-lobby-screen .panel-title span{font-size:11px}
+  #host-lobby-screen .panel-title strong{font-size:24px}
+  #host-lobby-screen .host-player-list{padding:14px 4px;gap:14px}
+  #host-lobby-screen .lobby-player-card{min-height:92px;padding:12px 56px 12px 15px;border-radius:20px}
+  #host-lobby-screen .player-color-dot{width:52px;height:52px;flex-basis:52px}
+  #host-lobby-screen .lobby-player-card strong{font-size:21px}
+  #host-lobby-screen .kick-player{width:32px;height:32px;right:11px;top:11px}
+}
+
+@media (max-height: 700px) and (min-width: 651px){
+  #host-lobby-screen.stage-screen{padding:4px 8px}
+  #host-lobby-screen .stage-header{min-height:70px;padding:7px 16px}
+  #host-lobby-screen .stage-header h1{font-size:30px}
+  #host-lobby-screen .back-button{width:50px;height:50px;border-radius:16px}
+  #host-lobby-screen .room-code-box{min-width:145px;padding:6px 14px}
+  #host-lobby-screen .room-code-box strong{font-size:26px}
+  #host-lobby-screen .host-lobby-grid{grid-template-columns:260px minmax(0,1fr);gap:12px;padding:10px 12px 12px}
+  #host-lobby-screen .lobby-info-panel{gap:8px}
+  #host-lobby-screen .qr-info-card{padding:9px 11px 11px;gap:8px}
+  #host-lobby-screen .qr-info-card .lobby-qr{width:140px;height:140px;padding:6px}
+  #host-lobby-screen .share-room-button{width:44px;height:44px;border-radius:15px}
+  #host-lobby-screen .share-room-button svg{width:22px;height:22px}
+  #host-lobby-screen .lobby-time-card{min-height:88px;padding:9px 12px}
+  #host-lobby-screen .lobby-time-card .info-label{font-size:12px;margin-bottom:3px}
+  #host-lobby-screen .lobby-time-card #lobby-time{font-size:40px}
+  #host-lobby-screen .lobby-time-card #lobby-time.infinite-time-icon{font-size:54px}
+  #host-lobby-screen #start-match-button{min-height:50px;font-size:17px}
+  #host-lobby-screen #lobby-min-message{font-size:11px}
+  #host-lobby-screen .players-panel{padding:12px 16px 14px}
+  #host-lobby-screen .panel-title{min-height:58px;padding-bottom:9px}
+  #host-lobby-screen .panel-title img{width:34px}
+  #host-lobby-screen .panel-title span{font-size:10px}
+  #host-lobby-screen .panel-title strong{font-size:21px}
+  #host-lobby-screen .host-player-list{padding:10px 3px;gap:10px}
+  #host-lobby-screen .lobby-player-card{min-height:78px;padding:10px 50px 10px 12px}
+  #host-lobby-screen .player-color-dot{width:44px;height:44px;flex-basis:44px;border-width:5px}
+  #host-lobby-screen .lobby-player-card strong{font-size:19px}
+  #host-lobby-screen .players-panel::after{width:280px;bottom:-62px;opacity:.14}
+}
