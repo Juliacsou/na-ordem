@@ -49,12 +49,84 @@
   const audio = {
     correct: new Audio('assets/audio/correct.mp3'),
     lose: new Audio('assets/audio/gameover.mp3'),
+    winResult: new Audio('assets/audio/win-result.mp3'),
+    loseResult: new Audio('assets/audio/lose-result.mp3'),
     tick: new Audio('assets/audio/countdown.mp3'),
     start: new Audio('assets/audio/turn-start-whistle.mp3')
   };
   Object.values(audio).forEach(a => { a.volume = .55; a.preload = 'auto'; });
 
+  const gameMusic = {
+    background: new Audio('assets/audio/game-background.mp3'),
+    answering: new Audio('assets/audio/answering.mp3')
+  };
+  gameMusic.background.loop = true;
+  gameMusic.answering.loop = true;
+  gameMusic.background.volume = .22;
+  gameMusic.answering.volume = .46;
+  Object.values(gameMusic).forEach(a=>{a.preload='auto';});
+  let gameMusicStarted=false;
+  let gameMusicMuted=false;
+
   function playSound(name){ try { const a = audio[name]; if(!a) return; a.currentTime = 0; a.play().catch(()=>{}); } catch(_){} }
+  function setMusicTrackPlaying(track,shouldPlay){
+    const a=gameMusic[track]; if(!a)return;
+    if(shouldPlay && !gameMusicMuted){a.play().catch(()=>{});}
+    else a.pause();
+  }
+  function updateMuteButton(){
+    const btn=$('game-mute-button'); if(!btn)return;
+    btn.setAttribute('aria-label',gameMusicMuted?'Ativar música':'Mutar música');
+    btn.title=gameMusicMuted?'Ativar música':'Mutar música';
+    btn.querySelector('.mute-icon-on')?.classList.toggle('hidden',gameMusicMuted);
+    btn.querySelector('.mute-icon-off')?.classList.toggle('hidden',!gameMusicMuted);
+  }
+  function startGameMusic(){
+    if(state.mode!=='host' && state.mode!=='couch')return;
+    gameMusicStarted=true;
+    if(!gameMusicMuted) gameMusic.background.play().catch(()=>{});
+    updateMuteButton();
+  }
+  function stopGameMusic(){
+    gameMusicStarted=false;
+    Object.values(gameMusic).forEach(a=>{a.pause();a.currentTime=0;});
+  }
+  function syncGameMusicForScreen(screenId){
+    const isGameMode=state.mode==='host'||state.mode==='couch';
+    const gameplayScreen=isGameMode && !['home-screen','host-setup-screen','couch-setup-screen'].includes(screenId);
+    const btn=$('game-mute-button'); if(btn)btn.classList.toggle('hidden',!gameplayScreen);
+
+    const answering=screenId==='host-answering-screen'||screenId==='couch-turn-screen';
+
+    if(!gameplayScreen || !gameMusicStarted || gameMusicMuted){
+      gameMusic.background.pause();
+      gameMusic.answering.pause();
+      updateMuteButton();
+      return;
+    }
+
+    if(answering){
+      // During the response phase, Time's Running Out replaces the looping game track.
+      gameMusic.background.pause();
+      gameMusic.answering.play().catch(()=>{});
+    }else{
+      // Leaving the response phase stops the answering track and resumes the main loop
+      // from the exact point where it was paused.
+      gameMusic.answering.pause();
+      gameMusic.answering.currentTime=0;
+      gameMusic.background.play().catch(()=>{});
+    }
+    updateMuteButton();
+  }
+  function toggleGameMusic(){
+    gameMusicMuted=!gameMusicMuted;
+    if(gameMusicMuted) Object.values(gameMusic).forEach(a=>a.pause());
+    else {
+      const active=document.querySelector('.screen.active');
+      syncGameMusicForScreen(active?.id||'');
+    }
+    updateMuteButton();
+  }
   function uuid(){ return crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0,v=c==='x'?r:(r&3|8);return v.toString(16)}); }
   function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
   function show(id){
@@ -62,6 +134,7 @@
     $(id).classList.add('active');
     document.body.classList.toggle('couch-mode',state.mode==='couch');
     updatePlayerLeaveButton();
+    syncGameMusicForScreen(id);
     window.scrollTo(0,0);
   }
   function showError(id, message){ const el=$(id); el.textContent=message; el.classList.remove('hidden'); }
@@ -74,6 +147,30 @@
   function initials(name){ return String(name||'?').trim().slice(0,1).toUpperCase(); }
   function responseTimeLabel(seconds, infinite=false){ return infinite ? '∞' : `${Number(seconds)}s`; }
   function updatePlayerLeaveButton(){ const btn=$('player-leave-button'); if(btn) btn.classList.toggle('hidden', !(state.mode==='player' && state.player)); }
+
+  let appConfirmResolver=null;
+  let appConfirmDismissible=true;
+  function appConfirm(message,{title='Tem certeza?',confirmText='CONFIRMAR',cancelText='CANCELAR',danger=true,dismissible=true}={}){
+    const overlay=$('app-confirm-overlay');
+    if(!overlay) return Promise.resolve(window.confirm(message));
+    $('app-confirm-title').textContent=title;
+    $('app-confirm-message').textContent=message;
+    const ok=$('app-confirm-ok');
+    const cancel=$('app-confirm-cancel');
+    ok.textContent=confirmText;
+    cancel.textContent=cancelText;
+    ok.classList.toggle('danger-button',danger);
+    appConfirmDismissible=dismissible;
+    overlay.classList.remove('hidden');
+    return new Promise(resolve=>{ appConfirmResolver=resolve; });
+  }
+  function closeAppConfirm(value){
+    const overlay=$('app-confirm-overlay');
+    overlay?.classList.add('hidden');
+    const resolve=appConfirmResolver; appConfirmResolver=null;
+    appConfirmDismissible=true;
+    if(resolve) resolve(Boolean(value));
+  }
   function roomJoinUrl(code){
     const url=new URL(window.location.href);
     url.search='';
@@ -174,6 +271,7 @@
     await removeChannels();
     if(state.sortable){try{state.sortable.destroy();}catch(_){} state.sortable=null;}
     if(wasPlayer){ clearPlayerSession(); clearRoomQueryFromUrl(); }
+    stopGameMusic();
     state.mode=null; state.room=null; state.player=null; state.playerToken=null; state.round=null; state.pendingRoom=null; state.waitForNextRoundId=null; state.couchPlayers=[]; state.couchAnswers=new Map(); state.couchTurnIndex=0; state.couchPendingValue=null; if(state.couchTimerInterval){clearInterval(state.couchTimerInterval);state.couchTimerInterval=null;}
     show('home-screen');
     if(message) toast(message,3200);
@@ -202,6 +300,7 @@
 
   async function createRoom(){
     clearError('setup-error');
+    startGameMusic();
     const btn=$('create-room-button'); btn.disabled=true;
     state.hostToken=uuid();
     try{
@@ -219,7 +318,7 @@
       await refreshPlayers();
       renderHostLobby();
       show('host-lobby-screen');
-    }catch(err){ showError('setup-error','Não consegui criar a partida. Verifique o console para detalhes.'); console.error('Erro ao criar partida:',err); }
+    }catch(err){ stopGameMusic(); showError('setup-error','Não consegui criar a partida. Verifique o console para detalhes.'); console.error('Erro ao criar partida:',err); }
     finally{ btn.disabled=false; }
   }
 
@@ -261,13 +360,13 @@
     $('lobby-min-message').textContent=count<2?'Entre pelo menos 2 jogadores.':'Tudo pronto quando vocês estiverem!';
     if(!count){ list.className='host-player-list empty-state'; list.innerHTML='<p>Os jogadores aparecerão aqui.</p>'; return; }
     list.className='host-player-list';
-    list.innerHTML=state.players.map(p=>`<div class="lobby-player-card"><span class="player-color-dot" style="background:${p.color}"></span><strong>${escapeHtml(p.name)}</strong><button class="kick-player" data-kick="${p.id}" title="Expulsar jogador">×</button></div>`).join('');
+    list.innerHTML=state.players.map(p=>`<div class="lobby-player-card"><button class="kick-player" data-kick="${p.id}" title="Expulsar jogador" aria-label="Expulsar ${escapeHtml(p.name)}">×</button><span class="player-color-dot" style="background:${p.color}"></span><strong>${escapeHtml(p.name)}</strong><span class="lobby-player-status">AGUARDANDO</span></div>`).join('');
     list.querySelectorAll('[data-kick]').forEach(btn=>btn.addEventListener('click',()=>kickPlayer(btn.dataset.kick)));
   }
 
   async function kickPlayer(playerId){
     const p=state.players.find(x=>x.id===playerId); if(!p) return;
-    if(!confirm(`Expulsar ${p.name} da partida?`)) return;
+    if(!(await appConfirm(`Expulsar ${p.name} da partida?`,{title:'Remover jogador?',confirmText:'REMOVER'}))) return;
     const presence=state.channels.find(ch=>ch.topic?.includes('order-presence-'));
     try{await presence?.send({type:'broadcast',event:'kick',payload:{playerId}});}catch(_){}
     await db.from('order_players').delete().eq('id',playerId).eq('room_id',state.room.id);
@@ -285,13 +384,13 @@
 
   async function closeRoom(){
     if(!state.room){goHome();return;}
-    if(!confirm('Encerrar esta sala e voltar ao início?')) return;
+    if(!(await appConfirm('Encerrar esta sala e voltar ao início?',{title:'Encerrar sala?',confirmText:'ENCERRAR'}))) return;
     await endRoom('Sala encerrada.');
   }
 
   async function endMatch(){
     if(!state.room) return;
-    if(!confirm(state.mode==='couch'?'Encerrar esta partida?':'Encerrar a partida para todos os jogadores?')) return;
+    if(!(await appConfirm(state.mode==='couch'?'Encerrar esta partida?':'Encerrar a partida para todos os jogadores?',{title:'Encerrar partida?',confirmText:'ENCERRAR'}))) return;
     if(state.mode==='couch'){ await goHome('Partida encerrada.'); return; }
     await endRoom('Partida encerrada.');
   }
@@ -335,7 +434,10 @@
     $('answer-round-number').textContent=state.room.round_number;
     $('answering-theme').textContent=state.room.current_theme_text;
     const grid=$('answer-status-grid');
-    grid.innerHTML=state.players.map(p=>`<div class="answer-status-card ${p.answer_round_id===state.room.current_round_id?'answered':'waiting'}"><span class="dot" style="background:${p.color}"></span><strong>${escapeHtml(p.name)}</strong></div>`).join('');
+    grid.innerHTML=state.players.map(p=>{
+      const answered=p.answer_round_id===state.room.current_round_id;
+      return `<div class="answer-status-card ${answered?'answered':'waiting'}" style="--player-color:${p.color}"><span class="dot" style="background:${p.color}"></span><strong>${escapeHtml(p.name)}</strong></div>`;
+    }).join('');
   }
 
   function renderHostForStatus(){
@@ -360,11 +462,14 @@
 
   function startHostTimer(){
     if(state.timerInterval) clearInterval(state.timerInterval);
+    const timerPill=$('host-timer').closest('.timer-pill');
     if(!state.room?.deadline){
       $('host-timer').textContent='∞';
       $('host-timer-unit').textContent='';
+      timerPill?.classList.add('is-infinite');
       return;
     }
+    timerPill?.classList.remove('is-infinite');
     $('host-timer-unit').textContent='s';
     let lastTick=null;
     const run=async()=>{
@@ -374,6 +479,46 @@
       if(remaining<=0){ clearInterval(state.timerInterval); state.timerInterval=null; await finishAnswers(); }
     };
     run(); state.timerInterval=setInterval(run,250);
+  }
+
+  async function retryIncompleteRound(){
+    if(state.mode==='couch'){
+      state.couchAnswers=new Map();
+      state.couchTurnIndex=0;
+      state.couchPendingValue=null;
+      state.players=state.couchPlayers.map(p=>({...p,answer_round_id:null}));
+      state.room={...state.room,status:'answering',deadline:null};
+      if(state.round) state.round={...state.round,status:'answering'};
+      playSound('start');
+      beginCouchTurn();
+      return;
+    }
+    if(!state.room?.current_round_id) return;
+    const roundId=state.room.current_round_id;
+    const deadline=state.room.response_infinite ? null : new Date(Date.now()+Number(state.room.response_seconds)*1000).toISOString();
+    const {error:deleteError}=await db.from('order_answers').delete().eq('round_id',roundId);
+    if(deleteError){toast('Não consegui reiniciar esta carta.');console.error(deleteError);return;}
+    await db.from('order_players').update({answer_round_id:null}).eq('room_id',state.room.id);
+    await db.from('order_rounds').update({status:'answering',deadline}).eq('id',roundId);
+    const {data:room,error}=await db.from('order_rooms').update({status:'answering',deadline}).eq('id',state.room.id).select().single();
+    if(error){toast('Não consegui reiniciar esta carta.');console.error(error);return;}
+    state.room=room;
+    if(state.round) state.round={...state.round,status:'answering',deadline};
+    await refreshPlayers();
+    renderAnswering();
+    show('host-answering-screen');
+    startHostTimer();
+  }
+
+  async function handleIncompleteRound(responseCount){
+    const retry=await appConfirm(
+      responseCount===0
+        ? 'Ninguém respondeu esta carta. São necessárias pelo menos 2 respostas para continuar.'
+        : 'Apenas 1 jogador respondeu esta carta. São necessárias pelo menos 2 respostas para continuar.',
+      {title:'Partida incompleta',confirmText:'TENTAR NOVAMENTE',cancelText:'PRÓXIMA CARTA',danger:false,dismissible:false}
+    );
+    if(retry) await retryIncompleteRound();
+    else await nextCard();
   }
 
   let finishAnswersBusy=false;
@@ -386,10 +531,14 @@
       const roundId=state.room.current_round_id;
       const {data:answers,error}=await db.from('order_answers').select('player_id').eq('round_id',roundId);
       if(error){toast('Não consegui carregar as respostas.');return;}
+      const responded=new Set((answers||[]).map(a=>a.player_id));
+      if(responded.size<2){
+        await handleIncompleteRound(responded.size);
+        return;
+      }
       await db.from('order_rounds').update({status:'ordering'}).eq('id',roundId);
       const {data:room}=await db.from('order_rooms').update({status:'ordering',deadline:null}).eq('id',state.room.id).select().single();
       state.room=room; updateRoomCodeDisplays();
-      const responded=new Set((answers||[]).map(a=>a.player_id));
       renderOrdering(responded);
       show('host-ordering-screen');
     }finally{
@@ -417,6 +566,23 @@
   }
   function updateCardPositions(wrap){ [...wrap.children].forEach((el,i)=>el.dataset.position=String(i+1)); }
 
+  function setHostResultOutcome(success){
+    const headline=$('result-headline');
+    const img=$('result-outcome-image');
+    if(headline) headline.classList.add('hidden');
+    if(img){
+      img.src=success?'assets/images/result-win.png':'assets/images/result-lose.png';
+      img.alt=success?'Vocês acertaram!':'Vocês erraram!';
+      img.classList.remove('hidden');
+    }
+  }
+  function resetHostResultOutcome(){
+    const headline=$('result-headline');
+    const img=$('result-outcome-image');
+    if(headline) headline.classList.remove('hidden');
+    if(img) img.classList.add('hidden');
+  }
+
   async function revealResults(){
     if(state.revealBusy) return; state.revealBusy=true;
     $('reveal-button').disabled=true;
@@ -430,7 +596,7 @@
       state.room.status='revealing';
       $('result-round-number').textContent=state.room.round_number;
       $('result-theme').textContent=state.room.current_theme_text;
-      $('result-headline').textContent='VAMOS REVELAR!'; $('result-badge').textContent='...';
+      resetHostResultOutcome(); $('result-headline').textContent='VAMOS REVELAR!'; $('result-badge').textContent='...';
       $('result-message').className='result-message hidden'; $('result-actions').classList.add('hidden');
       const out=$('result-player-cards'); out.innerHTML=actualPlayers.map((p,i)=>orderCardHtml(p,i+1,false)).join('');
       show('host-result-screen');
@@ -444,12 +610,13 @@
         card.classList.add(bad?'bad-position':'good-position');
       });
       const msg=$('result-message'); msg.classList.remove('hidden');
-      $('result-headline').textContent=success?'VOCÊS ACERTARAM!':'QUASE! A ORDEM ESCAPOU';
+      $('result-headline').textContent=success?'VOCÊS ACERTARAM!':'VOCÊS ERRARAM!';
+      setHostResultOutcome(success);
       $('result-badge').textContent=success?'ACERTOU!':'ERROU';
       $('result-badge').style.background=success?'#15803d':'#b91c1c';
-      msg.classList.add(success?'win':'lose'); msg.textContent=success?'🏆 Ordem perfeita!':'😅 Algum número ficou fora de ordem.';
+      msg.classList.add(success?'win':'lose'); msg.textContent='';
       document.querySelector('.result-header').classList.add(success?'win':'lose');
-      playSound(success?'correct':'lose');
+      playSound(success?'winResult':'loseResult');
       state.round.status='result'; state.room.status='result';
       $('result-actions').classList.remove('hidden'); state.revealBusy=false;
       return;
@@ -466,7 +633,7 @@
 
     $('result-round-number').textContent=state.room.round_number;
     $('result-theme').textContent=state.room.current_theme_text;
-    $('result-headline').textContent='VAMOS REVELAR!'; $('result-badge').textContent='...';
+    resetHostResultOutcome(); $('result-headline').textContent='VAMOS REVELAR!'; $('result-badge').textContent='...';
     $('result-message').className='result-message hidden'; $('result-actions').classList.add('hidden');
     const out=$('result-player-cards'); out.innerHTML=actualPlayers.map((p,i)=>orderCardHtml(p,i+1,false)).join('');
     show('host-result-screen');
@@ -480,12 +647,13 @@
       card.classList.add(bad?'bad-position':'good-position');
     });
     const msg=$('result-message'); msg.classList.remove('hidden');
-    $('result-headline').textContent=success?'VOCÊS ACERTARAM!':'QUASE! A ORDEM ESCAPOU';
+    $('result-headline').textContent=success?'VOCÊS ACERTARAM!':'VOCÊS ERRARAM!';
+    setHostResultOutcome(success);
     $('result-badge').textContent=success?'ACERTOU!':'ERROU';
     $('result-badge').style.background=success?'#15803d':'#b91c1c';
-    msg.classList.add(success?'win':'lose'); msg.textContent=success?'🏆 Ordem perfeita!':'😅 Algum número ficou fora de ordem.';
+    msg.classList.add(success?'win':'lose'); msg.textContent='';
     document.querySelector('.result-header').classList.add(success?'win':'lose');
-    playSound(success?'correct':'lose');
+    playSound(success?'winResult':'loseResult');
     await db.from('order_rounds').update({status:'result',finished_at:new Date().toISOString()}).eq('id',state.room.current_round_id);
     const {data:resultRoom}=await db.from('order_rooms').update({status:'result'}).eq('id',state.room.id).select().single(); state.room=resultRoom;
     $('result-actions').classList.remove('hidden'); state.revealBusy=false;
@@ -551,6 +719,7 @@
     const names=state.couchPlayers.map(p=>String(p.name||'').trim());
     if(state.couchPlayers.length<2){showError('couch-setup-error','Adicione pelo menos 2 participantes.');return;}
     if(names.some(n=>!n)){showError('couch-setup-error','Preencha o nome de todos os participantes.');return;}
+    startGameMusic();
     state.couchPlayers=state.couchPlayers.map((p,i)=>({...p,name:names[i]}));
     state.players=state.couchPlayers.map(p=>({...p}));
     state.room={id:'couch-local',code:null,status:'selecting_theme',response_seconds:state.responseSeconds,response_infinite:state.responseInfinite,round_number:0,current_theme_id:null,current_theme_text:null,current_round_id:null,deadline:null};
@@ -630,10 +799,14 @@
     setTimeout(beginCouchTurn,450);
   }
 
-  function finishCouchAnswers(){
+  async function finishCouchAnswers(){
     if(state.couchTimerInterval){clearInterval(state.couchTimerInterval);state.couchTimerInterval=null;}
-    state.room.status='ordering';
     const responded=new Set(state.couchAnswers.keys());
+    if(responded.size<2){
+      await handleIncompleteRound(responded.size);
+      return;
+    }
+    state.room.status='ordering';
     renderOrdering(responded);
     show('host-ordering-screen');
   }
@@ -709,9 +882,12 @@
 
   function renderPlayerWaiting(){
     $('waiting-player-name').textContent=state.player.name; $('player-avatar').textContent=initials(state.player.name); $('player-avatar').style.setProperty('--player-color',state.player.color);
+    const waitCard=document.querySelector('#player-wait-screen .waiting-card');
+    if(waitCard) waitCard.classList.remove('choosing-theme-mode');
     const lobby=state.room.status==='lobby'; $('lobby-edit-box').classList.toggle('hidden',!lobby);
     $('player-wait-title').textContent=lobby?'Aguardando o host':'Aguardando a próxima etapa';
     $('player-wait-copy').textContent=lobby?'Assim que a partida começar, seu tema aparecerá aqui.':'Acompanhe a tela principal. O host está conduzindo a partida.';
+    $('player-wait-copy').classList.remove('hidden');
   }
 
   async function routePlayerByRoom(){
@@ -742,6 +918,12 @@
     }
 
     if(['ordering','revealing','result','selecting_theme'].includes(state.room.status) || waitingCurrentRound){
+      const waitCard=document.querySelector('#player-wait-screen .waiting-card');
+      if(waitCard){
+        waitCard.classList.toggle('choosing-theme-mode',state.room.status==='selecting_theme' && !waitingCurrentRound);
+        waitCard.classList.toggle('organizing-mode',state.room.status==='ordering' && !waitingCurrentRound);
+        waitCard.classList.toggle('revealing-mode',state.room.status==='revealing' && !waitingCurrentRound);
+      }
       const hasTheme=!!state.room.current_theme_text;
       $('player-wait-theme').classList.toggle('hidden',!hasTheme);
       if(hasTheme){
@@ -754,14 +936,15 @@
         $('player-wait-copy').textContent='Esta carta já estava em andamento quando você entrou. Aguarde o host iniciar a próxima.';
       }else if(state.room.status==='selecting_theme'){
         $('player-wait-title').textContent='O host está escolhendo a carta';
-        $('player-wait-copy').textContent='Acompanhe a sugestão acima. Se o host pular, ela muda aqui também.';
+        $('player-wait-copy').textContent='';
       }else if(state.room.status==='revealing'){
-        $('player-wait-title').textContent='Revelando a ordem 👀';
-        $('player-wait-copy').textContent='Acompanhe a revelação. O resultado aparece aqui no seu celular também.';
+        $('player-wait-title').textContent='Olho na tela principal!';
+        $('player-wait-copy').textContent='';
       }else{
-        $('player-wait-title').textContent='Olho na tela principal 👀';
-        $('player-wait-copy').textContent='Conversem e organizem a ordem. A frase da carta continua aqui para consulta.';
+        $('player-wait-title').textContent='Olho na tela principal!';
+        $('player-wait-copy').textContent='';
       }
+      $('player-wait-copy').classList.toggle('hidden',!$('player-wait-copy').textContent.trim());
       $('lobby-edit-box').classList.add('hidden');
       show('player-wait-screen');
       return;
@@ -778,9 +961,8 @@
     const {data:round}=await db.from('order_rounds').select('success,theme_text').eq('id',state.room.current_round_id).maybeSingle();
     const success=!!round?.success;
     $('player-result-theme-text').textContent=round?.theme_text || state.room.current_theme_text || 'Carta';
-    $('player-result-icon').textContent=success?'🏆':'😅';
-    $('player-result-title').textContent=success?'Vocês venceram!':'Não foi dessa vez!';
-    $('player-result-copy').textContent=success?'A ordem ficou perfeita. Boa!':'A ordem teve pelo menos uma posição fora do lugar. Próxima carta para tentar de novo!';
+    const resultImg=$('player-result-image');
+    if(resultImg){resultImg.src=success?'assets/images/result-win.png':'assets/images/result-lose.png';resultImg.alt=success?'Vocês acertaram!':'Vocês erraram!';}
     $('player-result-screen').classList.toggle('player-result-win',success);
     $('player-result-screen').classList.toggle('player-result-lose',!success);
     show('player-result-screen');
@@ -788,10 +970,13 @@
 
   function startPlayerTimer(){
     if(state.timerInterval)clearInterval(state.timerInterval);
+    const timerBox=document.querySelector('#player-answer-screen .mobile-timer');
     if(!state.room.deadline){
       $('player-timer').textContent='∞';
+      if(timerBox) timerBox.classList.add('infinite');
       return;
     }
+    if(timerBox) timerBox.classList.remove('infinite');
     const run=()=>{
       const rem=Math.max(0,Math.ceil((new Date(state.room.deadline).getTime()-Date.now())/1000)); $('player-timer').textContent=rem;
       if(rem<=0){clearInterval(state.timerInterval);state.timerInterval=null;if(state.player.answer_round_id!==state.room.current_round_id){show('player-wait-screen');$('player-wait-theme').classList.remove('hidden');$('player-wait-theme-text').textContent=state.room.current_theme_text||'Tema';$('player-wait-title').textContent='Tempo encerrado';$('player-wait-copy').textContent='Você não respondeu nesta carta. Acompanhe o restante na tela principal.';$('lobby-edit-box').classList.add('hidden');}}
@@ -816,7 +1001,7 @@
 
   async function leaveMatch(){
     if(!state.player || !state.room) return;
-    if(!confirm('Sair desta partida?')) return;
+    if(!(await appConfirm('Sair desta partida?',{title:'Sair da partida?',confirmText:'SAIR'}))) return;
     const playerId=state.player.id;
     const roomId=state.room.id;
     const playerToken=state.playerToken;
@@ -942,6 +1127,10 @@
   $('join-room-button').addEventListener('click',joinRoom);
   $('edit-player-button').addEventListener('click',editPlayer);
   $('player-leave-button').addEventListener('click',leaveMatch);
+  $('game-mute-button')?.addEventListener('click',toggleGameMusic);
+  $('app-confirm-cancel')?.addEventListener('click',()=>closeAppConfirm(false));
+  $('app-confirm-ok')?.addEventListener('click',()=>closeAppConfirm(true));
+  $('app-confirm-overlay')?.addEventListener('click',e=>{if(e.target===$('app-confirm-overlay') && appConfirmDismissible)closeAppConfirm(false);});
   $('submit-answer-button').addEventListener('click',submitAnswer);
   $('player-answer-input').addEventListener('keydown',e=>{if(e.key==='Enter')submitAnswer();});
 
@@ -964,5 +1153,29 @@
   }
 
   initApp();
+
+
+  function closeHostRoomOnPageExit(event){
+    if(event?.persisted) return; // Do not close when the page is kept alive in BFCache.
+    if(state.mode!=='host' || !state.room?.id || !state.hostToken) return;
+    if(state.room.status==='closed') return;
+
+    try{
+      const url = `${SUPABASE_URL}/rest/v1/order_rooms?id=eq.${encodeURIComponent(state.room.id)}&host_token=eq.${encodeURIComponent(state.hostToken)}`;
+      fetch(url,{
+        method:'PATCH',
+        headers:{
+          'apikey':SUPABASE_KEY,
+          'Authorization':`Bearer ${SUPABASE_KEY}`,
+          'Content-Type':'application/json',
+          'Prefer':'return=minimal'
+        },
+        body:JSON.stringify({status:'closed',deadline:null}),
+        keepalive:true
+      }).catch(()=>{});
+    }catch(_){}
+  }
+
+  window.addEventListener('pagehide',closeHostRoomOnPageExit);
 
 })();

@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=3.1.0">
+  <link rel="stylesheet" href="styles.css?v=3.2.9">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -143,8 +143,8 @@
           <h2 id="host-theme-text">Carregando tema...</h2>
         </div>
         <div class="theme-actions">
-          <button id="end-match-theme-button" class="secondary-button danger-button big-button" type="button">■ ENCERRAR PARTIDA</button>
-          <button id="skip-theme-button" class="secondary-button big-button" type="button">↻ PULAR TEMA</button>
+          <button id="end-match-theme-button" class="secondary-button danger-button big-button theme-action-button" type="button"><svg class="theme-action-icon theme-action-icon-x" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18"/></svg><span>ENCERRAR PARTIDA</span></button>
+          <button id="skip-theme-button" class="secondary-button big-button theme-action-button" type="button"><svg class="theme-action-icon theme-action-icon-refresh" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 8A7 7 0 1 0 20 15"/><path d="M19 3V8H14"/></svg><span>PULAR TEMA</span></button>
           <button id="play-theme-button" class="primary-button big-button" type="button"><span>▶</span> JOGAR ESSA!</button>
         </div>
       </div>
@@ -155,15 +155,15 @@
     <div class="stage-shell card answering-stage">
       <header class="stage-header">
         <div class="round-chip">CARTA <strong id="answer-round-number">1</strong></div>
-        <div><p class="eyebrow">RESPONDENDO</p><h1 id="answering-theme">Tema</h1></div>
+        <div class="answering-header-label"><p class="eyebrow">RESPONDENDO</p></div>
         <div class="stage-header-actions">
           <div class="compact-join-box"><div class="room-code-box compact-room-code"><span>CÓDIGO</span><strong data-room-code-display>------</strong></div><div class="header-qr compact-qr" data-room-qr data-qr-size="52" aria-label="QR Code para entrar na partida"></div></div>
           <div class="timer-pill"><img src="assets/icons/timer.png" alt=""><strong id="host-timer">30</strong><span id="host-timer-unit">s</span></div>
         </div>
       </header>
       <div class="answering-content">
+        <h1 id="answering-theme" class="answering-theme-focus">Tema</h1>
         <h2>Quem já respondeu?</h2>
-        <p>Os números continuam secretos até a revelação.</p>
         <div id="answer-status-grid" class="answer-status-grid"></div>
         <button id="finish-answers-button" class="secondary-button" type="button">ENCERRAR RESPOSTAS AGORA</button>
       </div>
@@ -194,19 +194,23 @@
     <div class="stage-shell card result-stage">
       <header class="stage-header result-header">
         <div class="round-chip">CARTA <strong id="result-round-number">1</strong></div>
-        <div><p class="eyebrow">RESULTADO</p><h1 id="result-headline">VAMOS REVELAR!</h1></div>
+        <div class="result-header-spacer" aria-hidden="true"></div>
         <div class="stage-header-actions">
-          <span id="result-badge" class="header-chip">...</span>
+          <span id="result-badge" class="header-chip result-badge-hidden">...</span>
           <div class="compact-join-box"><div class="room-code-box compact-room-code"><span>CÓDIGO</span><strong data-room-code-display>------</strong></div><div class="header-qr compact-qr" data-room-qr data-qr-size="52" aria-label="QR Code para entrar na partida"></div></div>
         </div>
       </header>
       <div class="result-content">
-        <div class="ordering-theme" id="result-theme">Tema</div>
+        <div class="result-outcome-wrap">
+          <h1 id="result-headline" class="result-outcome-title">VAMOS REVELAR!</h1>
+          <img id="result-outcome-image" class="result-outcome-image hidden" src="assets/images/result-win.png" alt="">
+        </div>
+        <div class="ordering-theme result-theme-block" id="result-theme">Tema</div>
         <div id="result-player-cards" class="sortable-player-cards result-cards"></div>
-        <div id="result-message" class="result-message hidden"></div>
+        <div id="result-message" class="result-message hidden" aria-hidden="true"></div>
         <div id="result-actions" class="result-actions hidden">
-          <button id="end-match-result-button" class="secondary-button danger-button" type="button">■ ENCERRAR PARTIDA</button>
-          <button id="next-card-button" class="primary-button" type="button">NOVA CARTA →</button>
+          <button id="end-match-result-button" class="secondary-button danger-button result-action-button" type="button"><svg class="result-icon-x" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18"/></svg><span>ENCERRAR PARTIDA</span></button>
+          <button id="next-card-button" class="primary-button result-action-button" type="button"><svg class="result-icon-refresh" viewBox="0 0 32 32" aria-hidden="true"><path d="M25.7 11.4A11 11 0 1 0 27 18"/><path d="M25.7 11.4V5.8M25.7 11.4H20.1"/></svg><span>NOVA CARTA</span></button>
         </div>
       </div>
     </div>
@@ -216,15 +220,15 @@
     <div class="stage-shell card couch-turn-stage">
       <header class="stage-header">
         <div class="round-chip">CARTA <strong id="couch-round-number">1</strong></div>
-        <div><p class="eyebrow">SUA VEZ</p><h1 id="couch-theme-text">Tema</h1></div>
+        <div class="couch-turn-header-label"><p class="eyebrow">SUA VEZ</p></div>
         <div class="timer-pill"><img src="assets/icons/timer.png" alt=""><strong id="couch-turn-timer">30</strong><span id="couch-turn-timer-unit">s</span></div>
       </header>
       <div class="couch-turn-content">
+        <h1 id="couch-theme-text" class="couch-theme-focus">Tema</h1>
         <div id="couch-turn-player" class="couch-current-player" style="--player-color:#7854ff">
           <span class="couch-player-dot"></span>
           <div><span>AGORA É A VEZ DE</span><strong id="couch-turn-player-name">Jogador</strong></div>
         </div>
-        <p class="couch-privacy-copy">Passe o dispositivo para essa pessoa. Os outros jogadores não devem ver o número digitado.</p>
         <input id="couch-answer-input" class="answer-input couch-answer-input" inputmode="decimal" autocomplete="off" placeholder="0">
         <button id="couch-answer-review" class="primary-button big-button" type="button">CONFIRMAR RESPOSTA</button>
         <div id="couch-answer-error" class="notice error hidden"></div>
@@ -247,11 +251,11 @@
 
   <section id="player-profile-screen" class="screen player-screen">
     <div class="player-shell">
-      <div class="player-logo"><span>NA</span><strong>ORDEM!</strong></div>
+      <div class="player-logo player-logo-new"><img src="assets/images/na-ordem-logo-v3.png" alt="Na Ordem!"></div>
       <div class="mobile-card">
         <p class="eyebrow">ENTRAR NA PARTIDA</p>
         <h1>Quem é você?</h1>
-        <div class="joined-code">Sala <strong id="player-room-code">------</strong></div>
+        <div class="joined-code player-room-code-hidden" aria-hidden="true">Sala <strong id="player-room-code">------</strong></div>
         <label class="field-label" for="player-name">SEU NOME</label>
         <input id="player-name" class="mobile-input" maxlength="24" autocomplete="off" placeholder="Digite seu nome">
         <span class="field-label">SUA COR</span>
@@ -264,7 +268,7 @@
 
   <section id="player-wait-screen" class="screen player-screen">
     <div class="player-shell waiting-player-shell">
-      <div class="player-logo"><span>NA</span><strong>ORDEM!</strong></div>
+      <div class="player-logo player-logo-new"><img src="assets/images/na-ordem-logo-v3.png" alt="Na Ordem!"></div>
       <div class="mobile-card waiting-card">
         <div id="player-avatar" class="player-avatar">J</div>
         <h1 id="waiting-player-name">Jogador</h1>
@@ -298,38 +302,62 @@
   <section id="player-submitted-screen" class="screen player-screen">
     <div class="player-shell waiting-player-shell">
       <div class="mobile-card waiting-card submitted-card">
-        <div class="success-check">✓</div>
+        <div class="success-check" aria-hidden="true">
+          <svg viewBox="0 0 64 64" aria-hidden="true"><path d="M17 33.5 27.5 44 48 20"/></svg>
+        </div>
         <h1>Resposta enviada!</h1>
         <div class="player-theme-preview submitted-theme">
           <span>CARTA ATUAL</span>
           <strong id="player-submitted-theme-text">Tema</strong>
         </div>
-        <p>Seu número está guardado. Agora conversem e tentem acertar a ordem na tela principal.</p>
-        <div class="watch-host">👀 Veja o resultado no dispositivo do host</div>
+        <h2 class="submitted-wait-title">Aguardando outros jogadores</h2>
+        <div class="waiting-pulse submitted-pulse" aria-label="Aguardando">
+          <span></span><span></span><span></span>
+        </div>
       </div>
     </div>
   </section>
 
 
   <section id="player-result-screen" class="screen player-screen">
-    <div class="player-shell waiting-player-shell">
-      <div class="mobile-card waiting-card player-result-card">
-        <div id="player-result-icon" class="player-result-icon">🏆</div>
-        <p class="eyebrow">RESULTADO DA CARTA</p>
-        <h1 id="player-result-title">Vocês venceram!</h1>
+    <div class="player-shell waiting-player-shell player-result-shell">
+      <div class="player-result-content">
+        <div class="result-outcome-wrap player-result-outcome-wrap">
+          <img id="player-result-image" class="result-outcome-image player-result-image" src="assets/images/result-win.png" alt="Vocês acertaram!">
+        </div>
         <div class="player-theme-preview result-theme-preview">
-          <span>CARTA</span>
+          <span>CARTA ATUAL</span>
           <strong id="player-result-theme-text">Tema</strong>
         </div>
-        <p id="player-result-copy">A ordem ficou perfeita. Boa!</p>
-        <div class="watch-host">A próxima carta começa pelo host</div>
+        <h2 class="player-result-wait-title">Aguardando o host</h2>
+        <div class="waiting-pulse player-result-pulse" aria-label="Aguardando">
+          <span></span><span></span><span></span>
+        </div>
       </div>
     </div>
   </section>
 
+  <button id="game-mute-button" class="game-mute-button hidden" type="button" aria-label="Mutar música" title="Mutar música">
+    <svg class="mute-icon mute-icon-on" viewBox="0 0 32 32" aria-hidden="true"><path d="M5 12h6l7-6v20l-7-6H5z"/><path d="M22 11c2.8 2.8 2.8 7.2 0 10M25 8c4.5 4.5 4.5 11.5 0 16"/></svg>
+    <svg class="mute-icon mute-icon-off hidden" viewBox="0 0 32 32" aria-hidden="true"><path d="M5 12h6l7-6v20l-7-6H5z"/><path d="M22 12l7 8M29 12l-7 8"/></svg>
+  </button>
+
   <button id="player-leave-button" class="player-leave-button hidden" type="button">SAIR DA PARTIDA</button>
+
+  <div id="app-confirm-overlay" class="app-confirm-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="app-confirm-title">
+    <div class="app-confirm-card">
+      <div class="app-confirm-icon" aria-hidden="true">!</div>
+      <h2 id="app-confirm-title">Tem certeza?</h2>
+      <p id="app-confirm-message">Deseja continuar?</p>
+      <div class="app-confirm-actions">
+        <button id="app-confirm-cancel" class="secondary-button" type="button">CANCELAR</button>
+        <button id="app-confirm-ok" class="primary-button danger-button" type="button">CONFIRMAR</button>
+      </div>
+    </div>
+  </div>
+
   <div id="toast" class="toast hidden"></div>
 </main>
-<script src="app.js?v=3.1.0"></script>
+<script src="app.js?v=3.3.4"></script>
 </body>
 </html>

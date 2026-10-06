@@ -1,4 +1,13 @@
-# Na Ordem! — v1.1.1
+## v3.2.9
+- Tela de identificação do Player atualizada com a nova logo oficial.
+- Código da sala removido visualmente dessa etapa.
+- Espaçamento vertical reajustado para celular.
+
+## v3.2.8
+- Refino visual do card de vez do jogador no modo Couch.
+- Conteúdo centralizado, mais espaçamento e remoção da instrução de privacidade.
+
+# Na Ordem! — v3.2.4
 
 Party game multiplayer inspirado na mesma linguagem visual do Mimicou.
 
