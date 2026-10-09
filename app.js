@@ -1246,6 +1246,29 @@
   initApp();
 
 
+  function disconnectPlayerOnPageExit(event){
+    if(event?.persisted) return; // BFCache: the page may return, so keep the player connected.
+    if(state.mode!=='player' || !state.player?.id || !state.room?.id || !state.playerToken) return;
+    if(state.player.connected===false) return;
+
+    try{
+      const url = `${SUPABASE_URL}/rest/v1/order_players?id=eq.${encodeURIComponent(state.player.id)}&room_id=eq.${encodeURIComponent(state.room.id)}&player_token=eq.${encodeURIComponent(state.playerToken)}`;
+      fetch(url,{
+        method:'PATCH',
+        headers:{
+          'apikey':SUPABASE_KEY,
+          'Authorization':`Bearer ${SUPABASE_KEY}`,
+          'Content-Type':'application/json',
+          'Prefer':'return=minimal'
+        },
+        body:JSON.stringify({connected:false,updated_at:new Date().toISOString()}),
+        keepalive:true
+      }).catch(err=>console.warn('Falha ao registrar desconexão ao fechar a página:',err));
+    }catch(err){
+      console.warn('Falha ao preparar desconexão ao fechar a página:',err);
+    }
+  }
+
   function closeHostRoomOnPageExit(event){
     if(event?.persisted) return; // Do not close when the page is kept alive in BFCache.
     if(state.mode!=='host' || !state.room?.id || !state.hostToken) return;
@@ -1261,12 +1284,15 @@
           'Content-Type':'application/json',
           'Prefer':'return=minimal'
         },
-        body:JSON.stringify({status:'closed',deadline:null}),
+        body:JSON.stringify({status:'closed',deadline:null,updated_at:new Date().toISOString()}),
         keepalive:true
-      }).catch(()=>{});
-    }catch(_){}
+      }).catch(err=>console.warn('Falha ao encerrar a sala ao fechar a página:',err));
+    }catch(err){
+      console.warn('Falha ao preparar encerramento da sala ao fechar a página:',err);
+    }
   }
 
+  window.addEventListener('pagehide',disconnectPlayerOnPageExit);
   window.addEventListener('pagehide',closeHostRoomOnPageExit);
 
 })();
