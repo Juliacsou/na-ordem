@@ -2880,3 +2880,47 @@ body.couch-mode .game-mute-button{
   #host-result-screen .result-cards .order-card{min-height:132px}
   #host-result-screen .result-actions{margin-top:12px}
 }
+
+/* === v3.9 | Correcao do lobby e audio === */
+@media (min-width:651px){
+  /* No lobby os cards nao devem crescer para preencher toda a altura do painel.
+     O grid permanece com 5 colunas ate 10 jogadores e cria no maximo 2 linhas
+     antes de entrar nas densidades compactas. */
+  #host-lobby-screen .host-player-list:not(.empty-state){
+    grid-auto-rows:auto!important;
+    align-content:start!important;
+    align-items:start!important;
+    justify-content:stretch!important;
+  }
+  #host-lobby-screen .lobby-player-card{
+    height:auto!important;
+    min-height:clamp(138px,20vh,178px)!important;
+    max-height:190px;
+    aspect-ratio:auto!important;
+  }
+  #host-lobby-screen .lobby-player-character{
+    width:100%!important;
+    height:clamp(70px,10.5vh,94px)!important;
+    flex:0 0 auto!important;
+  }
+  #host-lobby-screen .lobby-player-character img{
+    width:100%;
+    height:100%;
+    max-height:none!important;
+    object-fit:contain;
+  }
+  #host-lobby-screen .host-player-list[data-player-grid-density="compact"] .lobby-player-card{
+    min-height:128px!important;
+    max-height:158px;
+  }
+  #host-lobby-screen .host-player-list[data-player-grid-density="compact"] .lobby-player-character{
+    height:clamp(58px,8.5vh,76px)!important;
+  }
+  #host-lobby-screen .host-player-list[data-player-grid-density="dense"] .lobby-player-card{
+    min-height:112px!important;
+    max-height:140px;
+  }
+  #host-lobby-screen .host-player-list[data-player-grid-density="dense"] .lobby-player-character{
+    height:clamp(48px,7vh,62px)!important;
+  }
+}

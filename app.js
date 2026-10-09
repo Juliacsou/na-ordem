@@ -71,10 +71,26 @@
   let gameMusicStarted=false;
   let gameMusicMuted=false;
 
-  function playSound(name){ try { const a = audio[name]; if(!a) return; a.currentTime = 0; a.play().catch(()=>{}); } catch(_){} }
+  function safePlay(a,label='audio'){
+    if(!a) return Promise.resolve(false);
+    try{
+      const result=a.play();
+      if(result && typeof result.catch==='function'){
+        return result.then(()=>true).catch(err=>{
+          console.warn(`[Na Ordem] Reprodução de ${label} bloqueada ou falhou:`,err);
+          return false;
+        });
+      }
+      return Promise.resolve(true);
+    }catch(err){
+      console.warn(`[Na Ordem] Reprodução de ${label} falhou:`,err);
+      return Promise.resolve(false);
+    }
+  }
+  function playSound(name){ try { const a = audio[name]; if(!a) return; a.currentTime = 0; safePlay(a,`efeito ${name}`); } catch(_){} }
   function setMusicTrackPlaying(track,shouldPlay){
     const a=gameMusic[track]; if(!a)return;
-    if(shouldPlay && !gameMusicMuted){a.play().catch(()=>{});}
+    if(shouldPlay && !gameMusicMuted){safePlay(a,`música ${track}`);}
     else a.pause();
   }
   function updateMuteButton(){
@@ -87,7 +103,7 @@
   function startGameMusic(){
     if(state.mode!=='host' && state.mode!=='couch')return;
     gameMusicStarted=true;
-    if(!gameMusicMuted) gameMusic.background.play().catch(()=>{});
+    if(!gameMusicMuted) safePlay(gameMusic.background,'música principal');
     updateMuteButton();
   }
   function stopGameMusic(){
@@ -111,13 +127,13 @@
     if(answering){
       // During the response phase, Time's Running Out replaces the looping game track.
       gameMusic.background.pause();
-      gameMusic.answering.play().catch(()=>{});
+      safePlay(gameMusic.answering,'música de respostas');
     }else{
       // Leaving the response phase stops the answering track and resumes the main loop
       // from the exact point where it was paused.
       gameMusic.answering.pause();
       gameMusic.answering.currentTime=0;
-      gameMusic.background.play().catch(()=>{});
+      safePlay(gameMusic.background,'música principal');
     }
     updateMuteButton();
   }
@@ -336,6 +352,9 @@
 
   async function createRoom(){
     clearError('setup-error');
+    // Define o modo antes de iniciar a música. Antes, startGameMusic() era chamado
+    // com state.mode ainda vazio e retornava sem reproduzir o áudio.
+    state.mode='host';
     startGameMusic();
     const btn=$('create-room-button'); btn.disabled=true;
     state.hostToken=uuid();
@@ -354,7 +373,7 @@
       await refreshPlayers();
       renderHostLobby();
       show('host-lobby-screen');
-    }catch(err){ stopGameMusic(); showError('setup-error','Não consegui criar a partida. Verifique o console para detalhes.'); console.error('Erro ao criar partida:',err); }
+    }catch(err){ state.mode=null; stopGameMusic(); showError('setup-error','Não consegui criar a partida. Verifique o console para detalhes.'); console.error('Erro ao criar partida:',err); }
     finally{ btn.disabled=false; }
   }
 
@@ -394,7 +413,9 @@
     const total=Math.max(0,Number(count)||0);
     const baseColumns=5;
     const maxRows=2;
-    const columns=total<=baseColumns ? Math.max(1,total) : (total<=baseColumns*maxRows ? baseColumns : Math.ceil(total/maxRows));
+    // Mantém 5 colunas no desktop até 10 jogadores. Assim poucos jogadores
+    // não esticam os cards para ocupar toda a largura do lobby.
+    const columns=total<=baseColumns*maxRows ? baseColumns : Math.ceil(total/maxRows);
     element.style.setProperty('--player-grid-columns',String(columns));
     element.dataset.playerCount=String(total);
     element.dataset.playerGridDensity=columns<=5?'normal':(columns<=7?'compact':'dense');
