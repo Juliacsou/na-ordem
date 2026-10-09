@@ -225,8 +225,8 @@
       </header>
       <div class="couch-turn-content">
         <h1 id="couch-theme-text" class="couch-theme-focus">Tema</h1>
-        <div id="couch-turn-player" class="couch-current-player" style="--player-color:#7854ff">
-          <span class="couch-player-dot"></span>
+        <div id="couch-turn-player" class="couch-current-player">
+          <div class="couch-player-character"><img id="couch-turn-player-character" src="" alt=""></div>
           <div><span>AGORA É A VEZ DE</span><strong id="couch-turn-player-name">Jogador</strong></div>
         </div>
         <input id="couch-answer-input" class="answer-input couch-answer-input" inputmode="decimal" autocomplete="off" placeholder="0">
@@ -258,8 +258,10 @@
         <div class="joined-code player-room-code-hidden" aria-hidden="true">Sala <strong id="player-room-code">------</strong></div>
         <label class="field-label" for="player-name">SEU NOME</label>
         <input id="player-name" class="mobile-input" maxlength="24" autocomplete="off" placeholder="Digite seu nome">
-        <span class="field-label">SUA COR</span>
-        <div id="player-color-grid" class="color-grid"></div>
+        <span class="field-label">ESCOLHA SEU PERSONAGEM</span>
+        <div class="character-picker-shell">
+          <div id="player-character-grid" class="character-grid" role="radiogroup" aria-label="Escolha seu personagem"></div>
+        </div>
         <button id="join-room-button" class="primary-button mobile-primary" type="button">ENTRAR NA SALA</button>
         <div id="player-profile-error" class="notice error hidden"></div>
       </div>
@@ -270,7 +272,7 @@
     <div class="player-shell waiting-player-shell">
       <div class="player-logo player-logo-new"><img src="assets/images/na-ordem-logo-v3.png" alt="Na Ordem!"></div>
       <div class="mobile-card waiting-card">
-        <div id="player-avatar" class="player-avatar">J</div>
+        <div id="player-avatar" class="player-avatar"><img id="player-avatar-image" src="" alt="Seu personagem"></div>
         <h1 id="waiting-player-name">Jogador</h1>
         <div class="waiting-pulse"><span></span><span></span><span></span></div>
         <h2 id="player-wait-title">Aguardando o host</h2>
@@ -280,7 +282,7 @@
           <strong id="player-wait-theme-text">Tema</strong>
         </div>
         <div id="lobby-edit-box" class="lobby-edit-box">
-          <button id="edit-player-button" class="secondary-button" type="button">✎ EDITAR NOME E COR</button>
+          <button id="edit-player-button" class="secondary-button" type="button">✎ EDITAR NOME E PERSONAGEM</button>
         </div>
       </div>
     </div>

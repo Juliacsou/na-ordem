@@ -73,3 +73,22 @@ O Modo Couch é local e não exige novas tabelas ou colunas no Supabase.
 ## v3.0.2
 
 Refinamento visual da Home: nova logo, novo background, espaçamento dos botões e ícones vetoriais.
+
+## v3.4 — Painel administrativo
+
+- Nova página `admin.html`, protegida por Supabase Auth e lista de administradores em `order_admins`.
+- Gerenciamento de personagens: upload para o bucket `order-characters`, ativar/desativar, renomear, ordenar e excluir.
+- Gerenciamento de temas: cadastrar, editar, ativar/desativar e excluir.
+- A página principal do jogo continua em `index.html`; o painel não fica exposto na navegação do jogo.
+
+## Personagens: Supabase Storage only (v3.6)
+
+A partir desta versão, o frontend não possui catálogo local de personagens nem caminhos em `assets/characters`.
+As imagens dos personagens devem existir exclusivamente no bucket público `order-characters` do Supabase Storage.
+A tabela `order_characters` armazena `storage_path`, e o frontend monta a URL pública em tempo de execução.
+
+O painel `admin.html` permite:
+- cadastrar novos personagens diretamente no Storage;
+- trocar a imagem de um personagem existente;
+- migrar os 15 personagens iniciais em lote selecionando os PNGs originais;
+- ativar/desativar, renomear, reordenar e excluir personagens.

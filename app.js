@@ -7,7 +7,9 @@
     realtime: { params: { eventsPerSecond: 20 } }
   });
 
-  const COLORS = ['#FF4D6D','#FF9F1C','#FFD60A','#2DD4BF','#3B82F6','#8B5CF6','#EC4899','#22C55E','#F97316','#06B6D4','#A855F7','#84CC16'];
+  const LEGACY_PLAYER_COLOR = '#7854ff';
+  const CHARACTER_BUCKET = 'order-characters';
+
   const FALLBACK_THEMES = [
     'Quanto % esta seu celular','Quanto tempo passou no instagram hoje em minutos','quantos anos você tinha quando perdeu o BV?',
     'Quantas fotos voce tirou esse mes?','Quanto % do dia voce acha que passa sentado?','Quantas abas estão abertas no navegador do seu celular agora?',
@@ -28,6 +30,7 @@
     pendingRoom: null,
     waitForNextRoundId: null,
     players: [],
+    characters: [],
     themes: [],
     themeDeck: [],
     themeIndex: 0,
@@ -147,6 +150,39 @@
   function initials(name){ return String(name||'?').trim().slice(0,1).toUpperCase(); }
   function responseTimeLabel(seconds, infinite=false){ return infinite ? '∞' : `${Number(seconds)}s`; }
   function updatePlayerLeaveButton(){ const btn=$('player-leave-button'); if(btn) btn.classList.toggle('hidden', !(state.mode==='player' && state.player)); }
+  function publicCharacterUrl(storagePath){
+    if(!storagePath) return '';
+    return db.storage.from(CHARACTER_BUCKET).getPublicUrl(String(storagePath)).data.publicUrl;
+  }
+  function normalizeCharacter(row){
+    if(!row?.id || !row?.storage_path) return null;
+    return {
+      id:String(row.id),
+      name:String(row.name||'Personagem'),
+      storage_path:String(row.storage_path),
+      image_url:publicCharacterUrl(row.storage_path),
+      sort_order:Number(row.sort_order||0),
+      active:row.active!==false
+    };
+  }
+  async function loadCharacters(){
+    try{
+      const {data,error}=await db.from('order_characters').select('id,name,storage_path,sort_order,active').order('sort_order');
+      if(error) throw error;
+      state.characters=(data||[]).map(normalizeCharacter).filter(Boolean);
+    }catch(err){
+      state.characters=[];
+      console.error('Não foi possível carregar o catálogo de personagens do Supabase.',err);
+    }
+  }
+  function selectableCharacters(){ return state.characters.filter(c=>c.active!==false); }
+  function characterById(id){ return state.characters.find(c=>c.id===id) || null; }
+  function characterForPlayer(player){ return characterById(player?.character_id) || state.characters[0] || null; }
+  function characterImageHtml(player,className='player-character-image'){
+    const c=characterForPlayer(player);
+    if(!c) return `<div class="${className} character-missing" aria-label="Personagem indisponível">?</div>`;
+    return `<img class="${className}" src="${escapeHtml(c.image_url)}" alt="${escapeHtml(c.name)}">`;
+  }
 
   let appConfirmResolver=null;
   let appConfirmDismissible=true;
@@ -353,6 +389,17 @@
     renderLobbyPlayers();
   }
 
+  function applyResponsivePlayerGrid(element,count){
+    if(!element) return;
+    const total=Math.max(0,Number(count)||0);
+    const baseColumns=5;
+    const maxRows=2;
+    const columns=total<=baseColumns ? Math.max(1,total) : (total<=baseColumns*maxRows ? baseColumns : Math.ceil(total/maxRows));
+    element.style.setProperty('--player-grid-columns',String(columns));
+    element.dataset.playerCount=String(total);
+    element.dataset.playerGridDensity=columns<=5?'normal':(columns<=7?'compact':'dense');
+  }
+
   function renderLobbyPlayers(){
     const list=$('host-player-list'); const count=state.players.length;
     $('player-count').textContent=`${count} ${count===1?'jogador':'jogadores'}`;
@@ -360,7 +407,8 @@
     $('lobby-min-message').textContent=count<2?'Entre pelo menos 2 jogadores.':'Tudo pronto quando vocês estiverem!';
     if(!count){ list.className='host-player-list empty-state'; list.innerHTML='<p>Os jogadores aparecerão aqui.</p>'; return; }
     list.className='host-player-list';
-    list.innerHTML=state.players.map(p=>`<div class="lobby-player-card"><button class="kick-player" data-kick="${p.id}" title="Expulsar jogador" aria-label="Expulsar ${escapeHtml(p.name)}">×</button><span class="player-color-dot" style="background:${p.color}"></span><strong>${escapeHtml(p.name)}</strong><span class="lobby-player-status">AGUARDANDO</span></div>`).join('');
+    applyResponsivePlayerGrid(list,count);
+    list.innerHTML=state.players.map(p=>`<div class="lobby-player-card"><button class="kick-player" data-kick="${p.id}" title="Expulsar jogador" aria-label="Expulsar ${escapeHtml(p.name)}">×</button><div class="lobby-player-character">${characterImageHtml(p)}</div><strong>${escapeHtml(p.name)}</strong><span class="lobby-player-status">AGUARDANDO</span></div>`).join('');
     list.querySelectorAll('[data-kick]').forEach(btn=>btn.addEventListener('click',()=>kickPlayer(btn.dataset.kick)));
   }
 
@@ -434,9 +482,10 @@
     $('answer-round-number').textContent=state.room.round_number;
     $('answering-theme').textContent=state.room.current_theme_text;
     const grid=$('answer-status-grid');
+    applyResponsivePlayerGrid(grid,state.players.length);
     grid.innerHTML=state.players.map(p=>{
       const answered=p.answer_round_id===state.room.current_round_id;
-      return `<div class="answer-status-card ${answered?'answered':'waiting'}" style="--player-color:${p.color}"><span class="dot" style="background:${p.color}"></span><strong>${escapeHtml(p.name)}</strong></div>`;
+      return `<div class="answer-status-card ${answered?'answered':'waiting'}"><div class="answer-player-character">${characterImageHtml(p)}</div><strong>${escapeHtml(p.name)}</strong></div>`;
     }).join('');
   }
 
@@ -552,6 +601,7 @@
     const responders=state.players.filter(p=>responded.has(p.id));
     const missing=state.players.filter(p=>!responded.has(p.id));
     const wrap=$('sortable-player-cards');
+    applyResponsivePlayerGrid(wrap,responders.length);
     wrap.innerHTML=responders.map((p,i)=>orderCardHtml(p,i+1,false)).join('');
     updateCardPositions(wrap);
     const note=$('missing-answer-note');
@@ -562,7 +612,7 @@
   }
 
   function orderCardHtml(p,pos,revealed,value){
-    return `<div class="order-card${revealed?' revealed':''}" data-player-id="${p.id}" data-position="${pos}" style="--player-color:${p.color}"><span class="drag-handle">•••</span><span class="order-dot"></span><strong>${escapeHtml(p.name)}</strong><div class="secret-value">${revealed?escapeHtml(formatValue(value)):'?'}</div></div>`;
+    return `<div class="order-card${revealed?' revealed':''}" data-player-id="${p.id}" data-position="${pos}"><span class="drag-handle">•••</span><div class="order-player-character">${characterImageHtml(p)}</div><strong>${escapeHtml(p.name)}</strong><div class="secret-value">${revealed?escapeHtml(formatValue(value)):'?'}</div></div>`;
   }
   function updateCardPositions(wrap){ [...wrap.children].forEach((el,i)=>el.dataset.position=String(i+1)); }
 
@@ -598,7 +648,7 @@
       $('result-theme').textContent=state.room.current_theme_text;
       resetHostResultOutcome(); $('result-headline').textContent='VAMOS REVELAR!'; $('result-badge').textContent='...';
       $('result-message').className='result-message hidden'; $('result-actions').classList.add('hidden');
-      const out=$('result-player-cards'); out.innerHTML=actualPlayers.map((p,i)=>orderCardHtml(p,i+1,false)).join('');
+      const out=$('result-player-cards'); applyResponsivePlayerGrid(out,actualPlayers.length); out.innerHTML=actualPlayers.map((p,i)=>orderCardHtml(p,i+1,false)).join('');
       show('host-result-screen');
       for(let i=0;i<actualPlayers.length;i++){
         await sleep(650);
@@ -635,7 +685,7 @@
     $('result-theme').textContent=state.room.current_theme_text;
     resetHostResultOutcome(); $('result-headline').textContent='VAMOS REVELAR!'; $('result-badge').textContent='...';
     $('result-message').className='result-message hidden'; $('result-actions').classList.add('hidden');
-    const out=$('result-player-cards'); out.innerHTML=actualPlayers.map((p,i)=>orderCardHtml(p,i+1,false)).join('');
+    const out=$('result-player-cards'); applyResponsivePlayerGrid(out,actualPlayers.length); out.innerHTML=actualPlayers.map((p,i)=>orderCardHtml(p,i+1,false)).join('');
     show('host-result-screen');
     for(let i=0;i<actualPlayers.length;i++){
       await sleep(650);
@@ -686,14 +736,14 @@
     wrap.innerHTML=state.couchPlayers.map((p,i)=>`<div class="couch-player-edit-card" data-couch-player="${p.id}">
       <div class="couch-player-index">${i+1}</div>
       <input class="mobile-input couch-name-input" maxlength="24" value="${escapeHtml(p.name||'')}" placeholder="Nome do jogador" data-couch-name="${p.id}">
-      <div class="couch-color-row">${COLORS.map(c=>`<button type="button" class="couch-color-option ${p.color===c?'selected':''}" data-couch-color="${p.id}" data-color="${c}" style="--c:${c}" aria-label="Escolher cor"></button>`).join('')}</div>
+      <div class="couch-character-row">${selectableCharacters().map(c=>`<button type="button" class="couch-character-option ${p.character_id===c.id?'selected':''}" data-couch-character="${p.id}" data-character-id="${c.id}" aria-label="Escolher ${escapeHtml(c.name)}"><img src="${escapeHtml(c.image_url)}" alt=""></button>`).join('')}</div>
       <button class="couch-remove-player" type="button" data-couch-remove="${p.id}" ${state.couchPlayers.length<=2?'disabled':''}>×</button>
     </div>`).join('');
     wrap.querySelectorAll('[data-couch-name]').forEach(inp=>inp.addEventListener('input',()=>{
       const p=state.couchPlayers.find(x=>x.id===inp.dataset.couchName); if(p) p.name=inp.value;
     }));
-    wrap.querySelectorAll('[data-couch-color]').forEach(btn=>btn.addEventListener('click',()=>{
-      const p=state.couchPlayers.find(x=>x.id===btn.dataset.couchColor); if(!p)return; p.color=btn.dataset.color; renderCouchPlayerEditor();
+    wrap.querySelectorAll('[data-couch-character]').forEach(btn=>btn.addEventListener('click',()=>{
+      const p=state.couchPlayers.find(x=>x.id===btn.dataset.couchCharacter); if(!p)return; p.character_id=btn.dataset.characterId; renderCouchPlayerEditor();
     }));
     wrap.querySelectorAll('[data-couch-remove]').forEach(btn=>btn.addEventListener('click',()=>{
       if(state.couchPlayers.length<=2)return; state.couchPlayers=state.couchPlayers.filter(x=>x.id!==btn.dataset.couchRemove); renderCouchPlayerEditor();
@@ -702,11 +752,14 @@
 
   function addCouchPlayer(){
     const i=state.couchPlayers.length;
-    state.couchPlayers.push({id:`couch-${uuid()}`,name:'',color:COLORS[i%COLORS.length],connected:true});
+    const available=selectableCharacters();
+    const character=available[i%available.length] || null;
+    state.couchPlayers.push({id:`couch-${uuid()}`,name:'',character_id:character?.id||null,color:LEGACY_PLAYER_COLOR,connected:true});
     renderCouchPlayerEditor();
   }
 
   async function openCouchSetup(){
+    await loadCharacters();
     state.mode='couch'; state.room=null; state.player=null; state.players=[];
     state.responseSeconds=30; state.responseInfinite=false;
     state.couchPlayers=[]; addCouchPlayer(); addCouchPlayer();
@@ -750,7 +803,14 @@
     $('couch-round-number').textContent=state.room.round_number;
     $('couch-theme-text').textContent=state.room.current_theme_text;
     $('couch-turn-player-name').textContent=p.name;
-    $('couch-turn-player').style.setProperty('--player-color',p.color);
+    const couchCharacter=characterForPlayer(p);
+    if(couchCharacter){
+      $('couch-turn-player-character').src=couchCharacter.image_url;
+      $('couch-turn-player-character').alt=couchCharacter.name;
+    }else{
+      $('couch-turn-player-character').removeAttribute('src');
+      $('couch-turn-player-character').alt='Personagem indisponível';
+    }
     $('couch-answer-input').value='';
     clearError('couch-answer-error');
     $('couch-confirm-overlay').classList.add('hidden');
@@ -829,7 +889,7 @@
     }
     state.pendingRoom=data; state.room=data; state.mode='player';
     $('player-room-code').textContent=code; $('player-name').value='';
-    await renderColorPicker(); show('player-profile-screen');
+    await loadCharacters(); renderCharacterPicker(); show('player-profile-screen');
     return true;
   }
 
@@ -837,27 +897,30 @@
     return openRoomByCode($('join-code').value);
   }
 
-  async function renderColorPicker(selected){
-    const current=selected || state.player?.color || COLORS[0];
-    const grid=$('player-color-grid');
-    grid.innerHTML=COLORS.map(c=>`<button type="button" class="color-option ${c===current?'selected':''}" data-color="${c}" style="--c:${c}" aria-label="Cor ${c}"></button>`).join('');
+  function renderCharacterPicker(selected){
+    const available=selectableCharacters();
+    const current=selected || state.player?.character_id || available[0]?.id || '';
+    const grid=$('player-character-grid');
+    grid.innerHTML=available.length ? available.map(c=>`<button type="button" class="character-option ${c.id===current?'selected':''}" data-character-id="${c.id}" role="radio" aria-checked="${c.id===current?'true':'false'}" aria-label="${escapeHtml(c.name)}"><img src="${escapeHtml(c.image_url)}" alt=""></button>`).join('') : '<div class="character-catalog-empty">Nenhum personagem disponível. Cadastre personagens no painel Admin.</div>';
     grid.dataset.selected=current;
-    grid.querySelectorAll('.color-option').forEach(btn=>btn.addEventListener('click',()=>{
-      grid.querySelectorAll('.color-option').forEach(b=>b.classList.remove('selected')); btn.classList.add('selected'); grid.dataset.selected=btn.dataset.color;
+    grid.querySelectorAll('.character-option').forEach(btn=>btn.addEventListener('click',()=>{
+      grid.querySelectorAll('.character-option').forEach(b=>{b.classList.remove('selected');b.setAttribute('aria-checked','false');});
+      btn.classList.add('selected'); btn.setAttribute('aria-checked','true'); grid.dataset.selected=btn.dataset.characterId;
     }));
   }
 
+
   async function joinRoom(){
     clearError('player-profile-error');
-    const name=$('player-name').value.trim(); const color=$('player-color-grid').dataset.selected;
+    const name=$('player-name').value.trim(); const characterId=$('player-character-grid').dataset.selected;
     if(!name){showError('player-profile-error','Digite seu nome.');return;}
-    if(!color){showError('player-profile-error','Escolha uma cor.');return;}
+    if(!characterId){showError('player-profile-error','Escolha um personagem.');return;}
     if(state.player){
-      const {data,error}=await db.from('order_players').update({name,color}).eq('id',state.player.id).select().single();
+      const {data,error}=await db.from('order_players').update({name,character_id:characterId,color:LEGACY_PLAYER_COLOR}).eq('id',state.player.id).select().single();
       if(error){showError('player-profile-error','Não consegui salvar as alterações.');return;} state.player=data; savePlayerSession(); renderPlayerWaiting(); show('player-wait-screen'); return;
     }
     state.playerToken=uuid();
-    const {data,error}=await db.from('order_players').insert({room_id:state.room.id,player_token:state.playerToken,name,color,connected:true}).select().single();
+    const {data,error}=await db.from('order_players').insert({room_id:state.room.id,player_token:state.playerToken,name,character_id:characterId,color:LEGACY_PLAYER_COLOR,connected:true}).select().single();
     if(error){showError('player-profile-error','Não consegui entrar na sala. Tente novamente.');console.error(error);return;}
     state.player=data;
     state.waitForNextRoundId=(!['lobby','answering'].includes(state.room.status) && state.room.current_round_id) ? state.room.current_round_id : null;
@@ -881,7 +944,13 @@
   }
 
   function renderPlayerWaiting(){
-    $('waiting-player-name').textContent=state.player.name; $('player-avatar').textContent=initials(state.player.name); $('player-avatar').style.setProperty('--player-color',state.player.color);
+    $('waiting-player-name').textContent=state.player.name;
+    const playerCharacter=characterForPlayer(state.player);
+    if(playerCharacter){
+      $('player-avatar-image').src=playerCharacter.image_url; $('player-avatar-image').alt=playerCharacter.name;
+    }else{
+      $('player-avatar-image').removeAttribute('src'); $('player-avatar-image').alt='Personagem indisponível';
+    }
     const waitCard=document.querySelector('#player-wait-screen .waiting-card');
     if(waitCard) waitCard.classList.remove('choosing-theme-mode');
     const lobby=state.room.status==='lobby'; $('lobby-edit-box').classList.toggle('hidden',!lobby);
@@ -1016,7 +1085,7 @@
   }
 
   async function editPlayer(){
-    if(state.room.status!=='lobby')return; $('player-name').value=state.player.name; $('player-room-code').textContent=state.room.code; await renderColorPicker(state.player.color); show('player-profile-screen');
+    if(state.room.status!=='lobby')return; $('player-name').value=state.player.name; $('player-room-code').textContent=state.room.code; await loadCharacters(); renderCharacterPicker(state.player.character_id); show('player-profile-screen');
   }
 
   let restoringPlayerSession=false;
@@ -1145,6 +1214,7 @@
   });
 
   async function initApp(){
+    await loadCharacters();
     const restored=await restorePlayerSession({silent:true});
     if(restored) return;
     const params=new URLSearchParams(window.location.search);
