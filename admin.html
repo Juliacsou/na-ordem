@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#14073f">
+  <title>Na Ordem! — Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="admin.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <main class="admin-app">
+    <section id="dashboard-view" class="dashboard">
+      <header class="admin-header">
+        <div class="brand-line">
+          <img src="assets/images/na-ordem-logo-v3.png" alt="Na Ordem!">
+          <div><span>PAINEL ADMINISTRATIVO</span><strong>Conteúdo do jogo</strong></div>
+        </div>
+        <div class="admin-user"><span class="open-access-badge">ACESSO ABERTO</span></div>
+      </header>
+
+      <div class="admin-shell">
+        <aside class="sidebar">
+          <button class="nav-btn active" data-tab="characters" type="button"><span>🎭</span><div><strong>Personagens</strong><small>Imagens e disponibilidade</small></div></button>
+          <button class="nav-btn" data-tab="themes" type="button"><span>💬</span><div><strong>Temas</strong><small>Cartas usadas nas rodadas</small></div></button>
+          <div class="sidebar-note"><strong>Acesso temporariamente aberto</strong><p>Este painel não exige login nesta fase. Desativar preserva o histórico; excluir remove o item do catálogo.</p></div>
+        </aside>
+
+        <section class="content-area">
+          <div id="global-message" class="message hidden"></div>
+
+          <section id="characters-tab" class="tab-panel">
+            <div class="page-heading">
+              <div><span class="eyebrow">PERSONAGENS</span><h1>Biblioteca de personagens</h1><p>Envie novas imagens, altere a ordem e controle quais opções aparecem para os jogadores.</p></div>
+              <div class="stat-pill"><strong id="character-count">0</strong><span>cadastrados</span></div>
+            </div>
+
+            <div id="legacy-migration-card" class="editor-card migration-card hidden">
+              <div class="editor-heading"><div><span>⇧ MIGRAÇÃO INICIAL</span><h2>Enviar os personagens atuais para o Storage</h2></div></div>
+              <p class="migration-copy">Existem personagens cadastrados sem imagem no Supabase Storage. Selecione de uma vez os 15 PNGs originais e o painel fará o upload e vinculará cada imagem ao personagem correto.</p>
+              <div class="migration-actions">
+                <label class="upload-field migration-upload">
+                  <input id="legacy-character-files" type="file" accept="image/png,image/jpeg,image/webp" multiple>
+                  <span class="upload-icon">⬆</span>
+                  <span><strong>Selecionar imagens</strong><small id="legacy-files-label">Selecione os arquivos originais</small></span>
+                </label>
+                <button id="migrate-legacy-characters" class="primary-btn" type="button">MIGRAR PARA O STORAGE</button>
+              </div>
+            </div>
+
+            <div class="editor-card">
+              <div class="editor-heading"><div><span>＋ NOVO PERSONAGEM</span><h2>Adicionar à seleção</h2></div></div>
+              <form id="character-form" class="character-form">
+                <label class="field">Nome do personagem<input id="character-name" type="text" maxlength="60" required placeholder="Ex.: Pirata Neon"></label>
+                <label class="upload-field" id="character-upload-label">
+                  <input id="character-file" type="file" accept="image/png,image/jpeg,image/webp" required>
+                  <span class="upload-icon">⬆</span>
+                  <span><strong>Escolher imagem</strong><small>PNG, JPG ou WebP · até 5 MB</small></span>
+                  <img id="character-preview" class="upload-preview hidden" alt="Prévia">
+                </label>
+                <label class="check-field"><input id="character-active" type="checkbox" checked><span>Disponível para seleção imediatamente</span></label>
+                <button id="character-submit" class="primary-btn" type="submit">ADICIONAR PERSONAGEM</button>
+              </form>
+            </div>
+
+            <div class="section-toolbar"><div><h2>Personagens cadastrados</h2><p>Use as setas para alterar a ordem em que eles aparecem na seleção.</p></div><button id="refresh-characters" class="ghost-btn" type="button">ATUALIZAR</button></div>
+            <div id="characters-grid" class="characters-grid"><div class="loading-card">Carregando...</div></div>
+          </section>
+
+          <section id="themes-tab" class="tab-panel hidden">
+            <div class="page-heading">
+              <div><span class="eyebrow">TEMAS</span><h1>Biblioteca de temas</h1><p>Cadastre as frases que serão sorteadas durante as partidas.</p></div>
+              <div class="stat-pill"><strong id="theme-count">0</strong><span>cadastrados</span></div>
+            </div>
+
+            <div class="editor-card">
+              <div class="editor-heading"><div><span id="theme-form-kicker">＋ NOVO TEMA</span><h2 id="theme-form-title">Adicionar carta</h2></div><button id="cancel-theme-edit" class="ghost-btn hidden" type="button">CANCELAR EDIÇÃO</button></div>
+              <form id="theme-form" class="theme-form">
+                <label class="field full">Texto do tema<textarea id="theme-text" maxlength="280" required placeholder="Ex.: Quantas fotos você tirou este mês?"></textarea><small><span id="theme-char-count">0</span>/280 caracteres</small></label>
+                <label class="check-field"><input id="theme-active" type="checkbox" checked><span>Tema ativo e disponível nas partidas</span></label>
+                <button id="theme-submit" class="primary-btn" type="submit">ADICIONAR TEMA</button>
+              </form>
+            </div>
+
+            <div class="section-toolbar"><div><h2>Temas cadastrados</h2><p>Temas desativados permanecem salvos, mas não entram no sorteio.</p></div><button id="refresh-themes" class="ghost-btn" type="button">ATUALIZAR</button></div>
+            <div id="themes-list" class="themes-list"><div class="loading-card">Carregando...</div></div>
+          </section>
+        </section>
+      </div>
+    </section>
+  </main>
+  <script src="admin.js"></script>
+</body>
+</html>
