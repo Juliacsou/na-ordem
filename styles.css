@@ -2924,3 +2924,16 @@ body.couch-mode .game-mute-button{
     height:clamp(48px,7vh,62px)!important;
   }
 }
+
+/* v3.4.0: Safari iOS - altura das opcoes independente do tamanho intrinseco da imagem.
+   O padding percentual forma quadrados em todos os motores WebKit. */
+.character-grid { align-items:start; grid-auto-rows:min-content; }
+.character-option {
+  box-sizing:border-box; display:block; width:100%; height:0; min-width:0; min-height:0;
+  aspect-ratio:auto; padding:100% 0 0; margin:0; align-self:start;
+  -webkit-appearance:none; appearance:none;
+}
+.character-option img {
+  position:absolute; top:5px; left:5px; width:calc(100% - 10px); height:calc(100% - 10px);
+  object-fit:contain; pointer-events:none;
+}

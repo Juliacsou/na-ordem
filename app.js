@@ -623,7 +623,7 @@
     const missing=state.players.filter(p=>!responded.has(p.id));
     const wrap=$('sortable-player-cards');
     applyResponsivePlayerGrid(wrap,responders.length);
-    wrap.innerHTML=responders.map((p,i)=>orderCardHtml(p,i+1,false)).join('');
+    wrap.innerHTML=responders.map((p,i)=>orderCardHtml(p,responders.length-i,false)).join('');
     updateCardPositions(wrap);
     const note=$('missing-answer-note');
     if(missing.length){note.textContent=`Sem resposta nesta carta: ${missing.map(p=>p.name).join(', ')}. Eles ficam fora desta ordenação.`;note.classList.remove('hidden');}else note.classList.add('hidden');
@@ -635,7 +635,7 @@
   function orderCardHtml(p,pos,revealed,value){
     return `<div class="order-card${revealed?' revealed':''}" data-player-id="${p.id}" data-position="${pos}"><span class="drag-handle">•••</span><div class="order-player-character">${characterImageHtml(p)}</div><strong>${escapeHtml(p.name)}</strong><div class="secret-value">${revealed?escapeHtml(formatValue(value)):'?'}</div></div>`;
   }
-  function updateCardPositions(wrap){ [...wrap.children].forEach((el,i)=>el.dataset.position=String(i+1)); }
+  function updateCardPositions(wrap){ const count=wrap.children.length; [...wrap.children].forEach((el,i)=>el.dataset.position=String(count-i)); }
 
   function setHostResultOutcome(success){
     const headline=$('result-headline');
@@ -662,14 +662,14 @@
       const map=new Map(state.couchAnswers);
       const actualPlayers=orderedIds.map(id=>state.players.find(p=>p.id===id)).filter(Boolean);
       const values=orderedIds.map(id=>map.get(id));
-      const success=values.every((v,i)=>i===0 || values[i-1]<=v);
+      const success=values.every((v,i)=>i===0 || values[i-1]>=v);
       state.round={...state.round,status:'revealing',host_order:orderedIds,success};
       state.room.status='revealing';
       $('result-round-number').textContent=state.room.round_number;
       $('result-theme').textContent=state.room.current_theme_text;
       resetHostResultOutcome(); $('result-headline').textContent='VAMOS REVELAR!'; $('result-badge').textContent='...';
       $('result-message').className='result-message hidden'; $('result-actions').classList.add('hidden');
-      const out=$('result-player-cards'); applyResponsivePlayerGrid(out,actualPlayers.length); out.innerHTML=actualPlayers.map((p,i)=>orderCardHtml(p,i+1,false)).join('');
+      const out=$('result-player-cards'); applyResponsivePlayerGrid(out,actualPlayers.length); out.innerHTML=actualPlayers.map((p,i)=>orderCardHtml(p,actualPlayers.length-i,false)).join('');
       show('host-result-screen');
       for(let i=0;i<actualPlayers.length;i++){
         await sleep(650);
@@ -677,7 +677,7 @@
       }
       await sleep(500);
       [...out.children].forEach((card,i)=>{
-        const bad=(i>0&&values[i-1]>values[i]) || (i<values.length-1&&values[i]>values[i+1]);
+        const bad=(i>0&&values[i-1]<values[i]) || (i<values.length-1&&values[i]<values[i+1]);
         card.classList.add(bad?'bad-position':'good-position');
       });
       const msg=$('result-message'); msg.classList.remove('hidden');
@@ -697,8 +697,8 @@
     const map=new Map((answers||[]).map(a=>[a.player_id,Number(a.value)]));
     const actualPlayers=orderedIds.map(id=>state.players.find(p=>p.id===id)).filter(Boolean);
     const values=orderedIds.map(id=>map.get(id));
-    const success=values.every((v,i)=>i===0 || values[i-1]<=v);
-    const correctOrder=[...orderedIds].sort((a,b)=>map.get(a)-map.get(b));
+    const success=values.every((v,i)=>i===0 || values[i-1]>=v);
+    const correctOrder=[...orderedIds].sort((a,b)=>map.get(b)-map.get(a));
     await db.from('order_rounds').update({status:'revealing',host_order:orderedIds,correct_order:correctOrder,success}).eq('id',state.room.current_round_id);
     const {data:room}=await db.from('order_rooms').update({status:'revealing'}).eq('id',state.room.id).select().single(); state.room=room;
 
@@ -706,7 +706,7 @@
     $('result-theme').textContent=state.room.current_theme_text;
     resetHostResultOutcome(); $('result-headline').textContent='VAMOS REVELAR!'; $('result-badge').textContent='...';
     $('result-message').className='result-message hidden'; $('result-actions').classList.add('hidden');
-    const out=$('result-player-cards'); applyResponsivePlayerGrid(out,actualPlayers.length); out.innerHTML=actualPlayers.map((p,i)=>orderCardHtml(p,i+1,false)).join('');
+    const out=$('result-player-cards'); applyResponsivePlayerGrid(out,actualPlayers.length); out.innerHTML=actualPlayers.map((p,i)=>orderCardHtml(p,actualPlayers.length-i,false)).join('');
     show('host-result-screen');
     for(let i=0;i<actualPlayers.length;i++){
       await sleep(650);
@@ -714,7 +714,7 @@
     }
     await sleep(500);
     [...out.children].forEach((card,i)=>{
-      const bad=(i>0&&values[i-1]>values[i]) || (i<values.length-1&&values[i]>values[i+1]);
+      const bad=(i>0&&values[i-1]<values[i]) || (i<values.length-1&&values[i]<values[i+1]);
       card.classList.add(bad?'bad-position':'good-position');
     });
     const msg=$('result-message'); msg.classList.remove('hidden');
