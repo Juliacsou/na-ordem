@@ -154,6 +154,7 @@
     document.body.classList.toggle('couch-mode',state.mode==='couch');
     updatePlayerLeaveButton();
     syncGameMusicForScreen(id);
+    if(id==='host-ordering-screen') requestAnimationFrame(fitOrderingRows);
     window.scrollTo(0,0);
   }
   function showError(id, message){ const el=$(id); el.textContent=message; el.classList.remove('hidden'); }
@@ -433,13 +434,49 @@
     list.querySelectorAll('[data-kick]').forEach(btn=>btn.addEventListener('click',()=>kickPlayer(btn.dataset.kick)));
   }
 
+  // Disponivel tanto no lobby como durante as respostas. So confirma a expulsao
+  // quando o Supabase removeu o jogador, para nao desconectar alguem por engano.
+  let kickingPlayer=false;
   async function kickPlayer(playerId){
-    const p=state.players.find(x=>x.id===playerId); if(!p) return;
-    if(!(await appConfirm(`Expulsar ${p.name} da partida?`,{title:'Remover jogador?',confirmText:'REMOVER'}))) return;
-    const presence=state.channels.find(ch=>ch.topic?.includes('order-presence-'));
-    try{await presence?.send({type:'broadcast',event:'kick',payload:{playerId}});}catch(_){}
-    await db.from('order_players').delete().eq('id',playerId).eq('room_id',state.room.id);
-    await refreshPlayers(); renderLobbyPlayers();
+    if(kickingPlayer || state.mode!=='host' || !['lobby','answering'].includes(state.room?.status)) return;
+    const p=state.players.find(x=>x.id===playerId);
+    if(!p) return;
+    kickingPlayer=true;
+    try{
+      const confirmed=await appConfirm(`Expulsar ${p.name} da partida?`,{title:'Remover jogador?',confirmText:'EXPULSAR'});
+      if(!confirmed) return;
+      if(!state.room || !['lobby','answering'].includes(state.room.status)){
+        toast('Esta etapa ja terminou.');
+        return;
+      }
+      let {data,error}=await db.from('order_players').delete().eq('id',playerId).eq('room_id',state.room.id).select('id');
+      // Alguns bancos preservam as respostas historicas com chave estrangeira
+      // restritiva. Nesse caso, marcar como desconectado expulsa a sessao sem
+      // apagar historico ou exigir uma alteracao de esquema.
+      if(error?.code==='23503'){
+        const fallback=await db.from('order_players').update({connected:false,answer_round_id:null})
+          .eq('id',playerId).eq('room_id',state.room.id).select('id');
+        data=fallback.data;
+        error=fallback.error;
+      }
+      if(error) throw error;
+      if(!data?.length) throw new Error('O jogador nao foi removido da partida.');
+
+      const presence=state.channels.find(ch=>ch.topic?.includes('order-presence-'));
+      try{await presence?.send({type:'broadcast',event:'kick',payload:{playerId}});}catch(err){
+        console.warn('[Na Ordem] Aviso de expulsao nao entregue via broadcast:',err);
+      }
+      await refreshPlayers();
+      renderHostForStatus();
+      toast(`${p.name} foi expulso da partida.`);
+      // Ao expulsar quem ainda nao respondeu, os restantes podem ter concluido.
+      if(state.room.status==='answering') await maybeAutoFinishAnswers();
+    }catch(err){
+      console.error('[Na Ordem] Erro ao expulsar jogador:',err);
+      toast('Nao consegui expulsar o jogador. Tente novamente.');
+    }finally{
+      kickingPlayer=false;
+    }
   }
 
   async function endRoom(message='Partida encerrada.'){
@@ -506,7 +543,7 @@
     applyResponsivePlayerGrid(grid,state.players.length);
     grid.innerHTML=state.players.map(p=>{
       const answered=p.answer_round_id===state.room.current_round_id;
-      return `<div class="answer-status-card ${answered?'answered':'waiting'}"><div class="answer-player-character">${characterImageHtml(p)}</div><strong>${escapeHtml(p.name)}</strong></div>`;
+      return `<div class="answer-status-card ${answered?'answered':'waiting'}"><button type="button" class="kick-player" data-kick="${escapeHtml(p.id)}" title="Expulsar ${escapeHtml(p.name)}" aria-label="Expulsar ${escapeHtml(p.name)}">×</button><div class="answer-player-character">${characterImageHtml(p)}</div><strong>${escapeHtml(p.name)}</strong></div>`;
     }).join('');
   }
 
@@ -520,7 +557,7 @@
   let autoFinishBusy=false;
   async function maybeAutoFinishAnswers(){
     if(autoFinishBusy || !state.room || state.room.status!=='answering' || !state.room.current_round_id) return;
-    if(!state.players.length) return;
+    if(state.players.length<2) return;
     const allAnswered=state.players.every(p=>p.answer_round_id===state.room.current_round_id);
     if(!allAnswered) return;
     autoFinishBusy=true;
@@ -601,7 +638,9 @@
       const roundId=state.room.current_round_id;
       const {data:answers,error}=await db.from('order_answers').select('player_id').eq('round_id',roundId);
       if(error){toast('Não consegui carregar as respostas.');return;}
-      const responded=new Set((answers||[]).map(a=>a.player_id));
+      // Nao considera respostas de jogadores que ja sairam ou foram expulsos.
+      const activeIds=new Set(state.players.map(p=>p.id));
+      const responded=new Set((answers||[]).filter(a=>activeIds.has(a.player_id)).map(a=>a.player_id));
       if(responded.size<2){
         await handleIncompleteRound(responded.size);
         return;
@@ -622,117 +661,140 @@
     const responders=state.players.filter(p=>responded.has(p.id));
     const missing=state.players.filter(p=>!responded.has(p.id));
     const wrap=$('sortable-player-cards');
-    applyResponsivePlayerGrid(wrap,responders.length);
-    wrap.innerHTML=responders.map((p,i)=>orderCardHtml(p,responders.length-i,false)).join('');
+    resetOrderingResult();
+    // A lista tem sempre uma coluna; a posicao 1 fica no topo (maior numero).
+    wrap.innerHTML=responders.map((p,i)=>orderCardHtml(p,i+1,false)).join('');
+    wrap.querySelectorAll(':scope > .order-card').forEach(card=>card.setAttribute('role','listitem'));
     updateCardPositions(wrap);
     const note=$('missing-answer-note');
     if(missing.length){note.textContent=`Sem resposta nesta carta: ${missing.map(p=>p.name).join(', ')}. Eles ficam fora desta ordenação.`;note.classList.remove('hidden');}else note.classList.add('hidden');
     $('reveal-button').disabled=responders.length<2;
     if(state.sortable){try{state.sortable.destroy();}catch(_){} }
-    state.sortable=window.Sortable.create(wrap,{animation:180,delay:70,delayOnTouchOnly:true,touchStartThreshold:5,ghostClass:'sortable-ghost',chosenClass:'sortable-chosen',onEnd:()=>updateCardPositions(wrap)});
+    state.sortable=window.Sortable.create(wrap,{animation:180,delay:130,delayOnTouchOnly:true,touchStartThreshold:5,scroll:true,scrollSensitivity:70,scrollSpeed:12,ghostClass:'sortable-ghost',chosenClass:'sortable-chosen',onEnd:()=>updateCardPositions(wrap)});
   }
 
   function orderCardHtml(p,pos,revealed,value){
-    return `<div class="order-card${revealed?' revealed':''}" data-player-id="${p.id}" data-position="${pos}"><span class="drag-handle">•••</span><div class="order-player-character">${characterImageHtml(p)}</div><strong>${escapeHtml(p.name)}</strong><div class="secret-value">${revealed?escapeHtml(formatValue(value)):'?'}</div></div>`;
+    return `<div class="order-card${revealed?' revealed':''}" data-player-id="${p.id}" data-position="${pos}"><span class="drag-handle" aria-hidden="true">•••</span><div class="order-player-character">${characterImageHtml(p)}</div><strong>${escapeHtml(p.name)}</strong><div class="secret-value">${revealed?escapeHtml(formatValue(value)):'?'}</div></div>`;
   }
-  function updateCardPositions(wrap){ const count=wrap.children.length; [...wrap.children].forEach((el,i)=>el.dataset.position=String(count-i)); }
+  function updateCardPositions(wrap){ [...wrap.children].forEach((el,i)=>el.dataset.position=String(i+1)); }
 
-  function setHostResultOutcome(success){
-    const headline=$('result-headline');
-    const img=$('result-outcome-image');
-    if(headline) headline.classList.add('hidden');
-    if(img){
-      img.src=success?'assets/images/result-win.png':'assets/images/result-lose.png';
-      img.alt=success?'Vocês acertaram!':'Vocês erraram!';
-      img.classList.remove('hidden');
-    }
+  function fitOrderingRows(){
+    const list=$('sortable-player-cards');
+    if(!list || !$('host-ordering-screen').classList.contains('active') || !list.clientHeight) return;
+    const style=getComputedStyle(list);
+    const gap=parseFloat(style.rowGap)||0;
+    const padding=(parseFloat(style.paddingTop)||0)+(parseFloat(style.paddingBottom)||0);
+    // Dimensiona sempre pela área necessária a 8 cards, inclusive com temas longos.
+    const available=(list.clientHeight-padding-gap*7-4)/8;
+    const height=Math.max(33,Math.min(68,Math.floor(available)));
+    list.style.setProperty('--order-row-height',`${height}px`);
   }
-  function resetHostResultOutcome(){
-    const headline=$('result-headline');
-    const img=$('result-outcome-image');
-    if(headline) headline.classList.remove('hidden');
-    if(img) img.classList.add('hidden');
+  window.addEventListener('resize',fitOrderingRows);
+
+  // A revelação acontece na própria lista de ordenação, sem trocar de tela.
+  function resetOrderingResult(){
+    $('host-ordering-screen').classList.remove('ordering-revealing','ordering-result','ordering-win','ordering-lose');
+    $('ordering-stage-title').textContent='ORGANIZEM AS CARTAS';
+    $('ordering-stage-chip').textContent='ARRASTE';
+    $('ordering-help').innerHTML='<strong>↑ 1º lugar: maior número.</strong> O último da lista tem o menor número. Arraste o card para mudar sua posição.';
+    const img=$('ordering-outcome-image');
+    img.classList.remove('is-visible');
+    img.alt='';
+    $('reveal-button').classList.remove('hidden');
+    $('result-actions').classList.add('hidden');
   }
 
   async function revealResults(){
-    if(state.revealBusy) return; state.revealBusy=true;
+    if(state.revealBusy) return;
+    const list=$('sortable-player-cards');
+    const orderedIds=[...list.children].map(card=>card.dataset.playerId);
+    if(orderedIds.length<2) return;
+    state.revealBusy=true;
     $('reveal-button').disabled=true;
-    const orderedIds=[...$('sortable-player-cards').children].map(el=>el.dataset.playerId);
-    if(state.mode==='couch'){
-      const map=new Map(state.couchAnswers);
-      const actualPlayers=orderedIds.map(id=>state.players.find(p=>p.id===id)).filter(Boolean);
-      const values=orderedIds.map(id=>map.get(id));
-      const success=values.every((v,i)=>i===0 || values[i-1]>=v);
-      state.round={...state.round,status:'revealing',host_order:orderedIds,success};
-      state.room.status='revealing';
-      $('result-round-number').textContent=state.room.round_number;
-      $('result-theme').textContent=state.room.current_theme_text;
-      resetHostResultOutcome(); $('result-headline').textContent='VAMOS REVELAR!'; $('result-badge').textContent='...';
-      $('result-message').className='result-message hidden'; $('result-actions').classList.add('hidden');
-      const out=$('result-player-cards'); applyResponsivePlayerGrid(out,actualPlayers.length); out.innerHTML=actualPlayers.map((p,i)=>orderCardHtml(p,actualPlayers.length-i,false)).join('');
-      show('host-result-screen');
-      for(let i=0;i<actualPlayers.length;i++){
-        await sleep(650);
-        const card=out.children[i]; card.classList.add('revealed'); card.querySelector('.secret-value').textContent=formatValue(values[i]);
+    try{
+      let map;
+      if(state.mode==='couch'){
+        map=new Map(state.couchAnswers);
+      }else{
+        const {data:answers,error}=await db.from('order_answers').select('player_id,value').eq('round_id',state.room.current_round_id);
+        if(error) throw error;
+        map=new Map((answers||[]).map(answer=>[answer.player_id,Number(answer.value)]));
       }
-      await sleep(500);
-      [...out.children].forEach((card,i)=>{
-        const bad=(i>0&&values[i-1]<values[i]) || (i<values.length-1&&values[i]<values[i+1]);
+      const values=orderedIds.map(id=>map.get(id));
+      if(values.some(value=>!Number.isFinite(value))) throw new Error('Respostas incompletas para esta carta');
+      const success=values.every((v,i)=>i===0||values[i-1]>=v);
+      const correctOrder=[...orderedIds].sort((a,b)=>map.get(b)-map.get(a));
+      if(state.mode==='couch'){
+        state.round={...state.round,status:'revealing',host_order:orderedIds,success};
+        state.room.status='revealing';
+      }else{
+        const {error:roundError}=await db.from('order_rounds').update({status:'revealing',host_order:orderedIds,correct_order:correctOrder,success}).eq('id',state.room.current_round_id);
+        if(roundError) throw roundError;
+        const {data:room,error:roomError}=await db.from('order_rooms').update({status:'revealing'}).eq('id',state.room.id).select().single();
+        if(roomError) throw roomError;
+        state.room=room;
+      }
+
+      // Impede novas mudanças de posição quando o resultado começa.
+      if(state.sortable){state.sortable.destroy();state.sortable=null;}
+      const screen=$('host-ordering-screen');
+      screen.classList.add('ordering-revealing');
+      $('ordering-stage-title').textContent='VAMOS REVELAR!';
+      $('ordering-stage-chip').textContent='REVELANDO';
+      $('ordering-help').textContent='Revelando as respostas do último lugar até o primeiro...';
+      list.querySelectorAll('.order-card').forEach(card=>card.classList.add('locked'));
+      $('reveal-button').classList.add('hidden');
+      // Revela de baixo para cima: primeiro o menor número, por último o maior.
+      // Quando há rolagem, começamos mostrando o fim da lista.
+      const hasListScroll=list.scrollHeight>list.clientHeight;
+      if(hasListScroll) list.scrollTop=list.scrollHeight-list.clientHeight;
+      for(let i=values.length-1;i>=0;i--){
+        await sleep(650);
+        const card=list.children[i];
+        card.classList.add('revealed');
+        card.querySelector('.secret-value').textContent=formatValue(values[i]);
+        // Mantém a carta revelada visível mesmo quando existe rolagem interna.
+        if(hasListScroll) card.scrollIntoView({block:'nearest',behavior:'smooth'});
+      }
+      await sleep(450);
+      [...list.children].forEach((card,i)=>{
+        const bad=(i>0&&values[i-1]<values[i])||(i<values.length-1&&values[i]<values[i+1]);
         card.classList.add(bad?'bad-position':'good-position');
       });
-      const msg=$('result-message'); msg.classList.remove('hidden');
-      $('result-headline').textContent=success?'VOCÊS ACERTARAM!':'VOCÊS ERRARAM!';
-      setHostResultOutcome(success);
-      $('result-badge').textContent=success?'ACERTOU!':'ERROU';
-      $('result-badge').style.background=success?'#15803d':'#b91c1c';
-      msg.classList.add(success?'win':'lose'); msg.textContent='';
-      document.querySelector('.result-header').classList.add(success?'win':'lose');
+      const img=$('ordering-outcome-image');
+      img.src=success?'assets/images/result-win.png':'assets/images/result-lose.png';
+      img.alt=success?'Vocês acertaram!':'Vocês erraram!';
+      img.classList.add('is-visible');
+      screen.classList.remove('ordering-revealing');
+      screen.classList.add('ordering-result',success?'ordering-win':'ordering-lose');
+      $('ordering-stage-title').textContent='RESULTADO DA CARTA';
+      $('ordering-stage-chip').textContent='RESULTADO';
+      $('ordering-help').textContent=success?'A ordem do maior para o menor está correta!':'Confira as posições destacadas em vermelho.';
       playSound(success?'winResult':'loseResult');
-      state.round.status='result'; state.room.status='result';
-      $('result-actions').classList.remove('hidden'); state.revealBusy=false;
-      return;
+      if(state.mode==='couch'){
+        state.round.status='result';
+        state.room.status='result';
+      }else{
+        const {error:finishError}=await db.from('order_rounds').update({status:'result',finished_at:new Date().toISOString()}).eq('id',state.room.current_round_id);
+        if(finishError) console.warn('[Na Ordem] Falha ao atualizar status da rodada:',finishError);
+        const {data:resultRoom,error:roomError}=await db.from('order_rooms').update({status:'result'}).eq('id',state.room.id).select().single();
+        if(roomError) console.warn('[Na Ordem] Falha ao atualizar status da sala:',roomError);
+        else state.room=resultRoom;
+      }
+      $('result-actions').classList.remove('hidden');
+    }catch(error){
+      console.error('[Na Ordem] Erro ao revelar respostas:',error);
+      if(!$('host-ordering-screen').classList.contains('ordering-revealing') && !$('host-ordering-screen').classList.contains('ordering-result')){
+        $('reveal-button').disabled=false;
+      }
+      toast('Não foi possível revelar as respostas. Tente novamente.');
+    }finally{
+      state.revealBusy=false;
     }
-    const {data:answers,error}=await db.from('order_answers').select('player_id,value').eq('round_id',state.room.current_round_id);
-    if(error){state.revealBusy=false;toast('Erro ao revelar respostas.');return;}
-    const map=new Map((answers||[]).map(a=>[a.player_id,Number(a.value)]));
-    const actualPlayers=orderedIds.map(id=>state.players.find(p=>p.id===id)).filter(Boolean);
-    const values=orderedIds.map(id=>map.get(id));
-    const success=values.every((v,i)=>i===0 || values[i-1]>=v);
-    const correctOrder=[...orderedIds].sort((a,b)=>map.get(b)-map.get(a));
-    await db.from('order_rounds').update({status:'revealing',host_order:orderedIds,correct_order:correctOrder,success}).eq('id',state.room.current_round_id);
-    const {data:room}=await db.from('order_rooms').update({status:'revealing'}).eq('id',state.room.id).select().single(); state.room=room;
-
-    $('result-round-number').textContent=state.room.round_number;
-    $('result-theme').textContent=state.room.current_theme_text;
-    resetHostResultOutcome(); $('result-headline').textContent='VAMOS REVELAR!'; $('result-badge').textContent='...';
-    $('result-message').className='result-message hidden'; $('result-actions').classList.add('hidden');
-    const out=$('result-player-cards'); applyResponsivePlayerGrid(out,actualPlayers.length); out.innerHTML=actualPlayers.map((p,i)=>orderCardHtml(p,actualPlayers.length-i,false)).join('');
-    show('host-result-screen');
-    for(let i=0;i<actualPlayers.length;i++){
-      await sleep(650);
-      const card=out.children[i]; card.classList.add('revealed'); card.querySelector('.secret-value').textContent=formatValue(values[i]);
-    }
-    await sleep(500);
-    [...out.children].forEach((card,i)=>{
-      const bad=(i>0&&values[i-1]<values[i]) || (i<values.length-1&&values[i]<values[i+1]);
-      card.classList.add(bad?'bad-position':'good-position');
-    });
-    const msg=$('result-message'); msg.classList.remove('hidden');
-    $('result-headline').textContent=success?'VOCÊS ACERTARAM!':'VOCÊS ERRARAM!';
-    setHostResultOutcome(success);
-    $('result-badge').textContent=success?'ACERTOU!':'ERROU';
-    $('result-badge').style.background=success?'#15803d':'#b91c1c';
-    msg.classList.add(success?'win':'lose'); msg.textContent='';
-    document.querySelector('.result-header').classList.add(success?'win':'lose');
-    playSound(success?'winResult':'loseResult');
-    await db.from('order_rounds').update({status:'result',finished_at:new Date().toISOString()}).eq('id',state.room.current_round_id);
-    const {data:resultRoom}=await db.from('order_rooms').update({status:'result'}).eq('id',state.room.id).select().single(); state.room=resultRoom;
-    $('result-actions').classList.remove('hidden'); state.revealBusy=false;
   }
 
   async function nextCard(){
-    document.querySelector('.result-header').classList.remove('win','lose');
-    $('result-badge').removeAttribute('style');
+    resetOrderingResult();
     if(state.mode==='couch'){
       state.room={...state.room,status:'selecting_theme',current_theme_id:null,current_theme_text:null,current_round_id:null,deadline:null};
       state.round=null; state.couchAnswers=new Map(); state.couchTurnIndex=0;
@@ -1209,6 +1271,11 @@
   $('share-room-button')?.addEventListener('click',shareRoomLink);
   $('skip-theme-button').addEventListener('click',pickNextTheme);
   $('play-theme-button').addEventListener('click',playSelectedTheme);
+  // Delegacao: funciona mesmo quando o Supabase atualiza e recria os cards.
+  $('answer-status-grid').addEventListener('click',event=>{
+    const kickButton=event.target.closest('button[data-kick]');
+    if(kickButton) kickPlayer(kickButton.dataset.kick);
+  });
   $('finish-answers-button').addEventListener('click',finishAnswers);
   $('reveal-button').addEventListener('click',revealResults);
   $('next-card-button').addEventListener('click',nextCard);

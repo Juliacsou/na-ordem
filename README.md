@@ -1,3 +1,14 @@
+# Na Ordem! — v3.9.3
+
+- Ordenação e resultado na mesma tela de lista vertical; não existe mais tela horizontal de resultado.
+- Espaço fixo para o resultado no topo, com a logo aparecendo somente ao final da revelação.
+- Respostas reveladas progressivamente de baixo para cima (do menor colocado ao maior colocado).
+- Arraste por qualquer região do card, inclusive nome, avatar ou número oculto.
+- Área do número secreto aumentada e centralizada dentro do card.
+- Altura das linhas ajustada ao espaço disponível, priorizando 8 cards inteiros sem rolagem; listas maiores têm rolagem interna.
+- Atualização da partida e resultado mantidos no Supabase para o modo Online. Sem alterações no banco.
+- O host também pode expulsar jogadores diretamente na etapa **Respondendo**, com confirmação, sejam eles aguardando ou já respondidos. A lista se atualiza e desconsidera jogadores removidos nas respostas da carta.
+
 ## v3.2.9
 - Tela de identificação do Player atualizada com a nova logo oficial.
 - Código da sala removido visualmente dessa etapa.
@@ -27,8 +38,8 @@ A configuração atual do Supabase deve manter as migrações já aplicadas nas 
 - Iniciar a partida e acompanhar a sugestão de carta sincronizada com os celulares.
 - Pular/aceitar temas.
 - Acompanhar quem respondeu sem ver os números; quando todos os jogadores elegíveis respondem, a etapa encerra automaticamente.
-- Arrastar as cartas do menor para o maior.
-- Revelar os números e ver se a ordem estava correta.
+- Arrastar os jogadores por qualquer ponto do card em uma lista vertical, colocando o maior número em 1º lugar (no topo) e o menor no fim. A lista permite ver ao menos 8 jogadores, rolando somente a área de cards quando houver mais participantes.
+- Revelar os números de baixo para cima, na mesma lista, e ver o resultado quando todos aparecerem.
 - Jogar uma nova carta ou encerrar a partida para todos.
 
 ### Player — celular

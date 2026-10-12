@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=3.4.0">
+  <link rel="stylesheet" href="styles.css?v=3.9.3">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -177,43 +177,26 @@
     <div class="stage-shell card ordering-stage">
       <header class="stage-header">
         <div class="round-chip">CARTA <strong id="order-round-number">1</strong></div>
-        <div><p class="eyebrow">MAIOR → MENOR</p><h1>ORGANIZEM AS CARTAS</h1></div>
+        <div><p class="eyebrow">MAIOR → MENOR</p><h1 id="ordering-stage-title">ORGANIZEM AS CARTAS</h1></div>
         <div class="stage-header-actions">
-          <span class="header-chip">ARRASTE</span>
+          <span id="ordering-stage-chip" class="header-chip">ARRASTE</span>
           <div class="compact-join-box"><div class="room-code-box compact-room-code"><span>CÓDIGO</span><strong data-room-code-display>------</strong></div><div class="header-qr compact-qr" data-room-qr data-qr-size="52" aria-label="QR Code para entrar na partida"></div></div>
         </div>
       </header>
       <div class="ordering-content">
+        <div id="ordering-outcome-slot" class="ordering-outcome-slot" role="status" aria-live="polite">
+          <img id="ordering-outcome-image" class="ordering-outcome-image" src="assets/images/result-win.png" alt="">
+        </div>
         <div class="ordering-theme" id="ordering-theme">Tema</div>
-        <p class="ordering-help">Arraste os jogadores para a ordem que vocês acham correta. Comecem pelo maior número e terminem no menor. Os números ainda estão escondidos.</p>
-        <div id="sortable-player-cards" class="sortable-player-cards"></div>
+        <p id="ordering-help" class="ordering-help"><strong>↑ 1º lugar: maior número.</strong> O último da lista tem o menor número. Arraste o card para mudar sua posição.</p>
+        <div id="sortable-player-cards" class="sortable-player-cards" role="list" aria-label="Ranking dos jogadores, do maior número ao menor"></div>
         <div id="missing-answer-note" class="missing-answer-note hidden"></div>
-        <button id="reveal-button" class="primary-button reveal-button" type="button">✨ REVELAR</button>
-      </div>
-    </div>
-  </section>
-
-  <section id="host-result-screen" class="screen stage-screen result-screen">
-    <div class="stage-shell card result-stage">
-      <header class="stage-header result-header">
-        <div class="round-chip">CARTA <strong id="result-round-number">1</strong></div>
-        <div class="result-header-spacer" aria-hidden="true"></div>
-        <div class="stage-header-actions">
-          <span id="result-badge" class="header-chip result-badge-hidden">...</span>
-          <div class="compact-join-box"><div class="room-code-box compact-room-code"><span>CÓDIGO</span><strong data-room-code-display>------</strong></div><div class="header-qr compact-qr" data-room-qr data-qr-size="52" aria-label="QR Code para entrar na partida"></div></div>
-        </div>
-      </header>
-      <div class="result-content">
-        <div class="result-outcome-wrap">
-          <h1 id="result-headline" class="result-outcome-title">VAMOS REVELAR!</h1>
-          <img id="result-outcome-image" class="result-outcome-image hidden" src="assets/images/result-win.png" alt="">
-        </div>
-        <div class="ordering-theme result-theme-block" id="result-theme">Tema</div>
-        <div id="result-player-cards" class="sortable-player-cards result-cards"></div>
-        <div id="result-message" class="result-message hidden" aria-hidden="true"></div>
-        <div id="result-actions" class="result-actions hidden">
-          <button id="end-match-result-button" class="secondary-button danger-button result-action-button" type="button"><svg class="result-icon-x" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18"/></svg><span>ENCERRAR PARTIDA</span></button>
-          <button id="next-card-button" class="primary-button result-action-button" type="button"><svg class="result-icon-refresh" viewBox="0 0 32 32" aria-hidden="true"><path d="M25.7 11.4A11 11 0 1 0 27 18"/><path d="M25.7 11.4V5.8M25.7 11.4H20.1"/></svg><span>NOVA CARTA</span></button>
+        <div class="ordering-footer">
+          <button id="reveal-button" class="primary-button reveal-button" type="button">✨ REVELAR</button>
+          <div id="result-actions" class="result-actions hidden">
+            <button id="end-match-result-button" class="secondary-button danger-button result-action-button" type="button"><svg class="result-icon-x" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18"/></svg><span>ENCERRAR PARTIDA</span></button>
+            <button id="next-card-button" class="primary-button result-action-button" type="button"><svg class="result-icon-refresh" viewBox="0 0 32 32" aria-hidden="true"><path d="M25.7 11.4A11 11 0 1 0 27 18"/><path d="M25.7 11.4V5.8M25.7 11.4H20.1"/></svg><span>NOVA CARTA</span></button>
+          </div>
         </div>
       </div>
     </div>
@@ -363,6 +346,6 @@
 
   <div id="toast" class="toast hidden"></div>
 </main>
-<script src="app.js?v=3.4.0"></script>
+<script src="app.js?v=3.9.3"></script>
 </body>
 </html>
