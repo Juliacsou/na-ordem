@@ -15,20 +15,30 @@
 </head>
 <body>
   <main class="admin-app">
-    <section id="dashboard-view" class="dashboard">
+    <section id="login-view" class="auth-screen" style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;">
+      <form id="login-form" style="width:min(100%,420px);background:#fff;border-radius:20px;padding:32px;display:grid;gap:14px;color:#201044;box-shadow:0 14px 50px #09002733;">
+        <h1 style="font-family:Poppins,sans-serif;font-size:24px;margin:0;">Administração · Na Ordem!</h1>
+        <p style="margin:0;">Entre com seu administrador AltiGames.</p>
+        <label>E-mail<input id="login-email" type="email" autocomplete="username" required style="display:block;width:100%;padding:12px;border:1px solid #bbb;border-radius:10px;"></label>
+        <label>Senha<input id="login-password" type="password" autocomplete="current-password" required style="display:block;width:100%;padding:12px;border:1px solid #bbb;border-radius:10px;"></label>
+        <p id="login-error" role="alert" style="color:#a11646;margin:0;font-size:13px;"></p>
+        <button id="login-button" type="submit" class="primary-btn">ENTRAR</button>
+      </form>
+    </section>
+    <section id="dashboard-view" class="dashboard hidden">
       <header class="admin-header">
         <div class="brand-line">
           <img src="assets/images/na-ordem-logo-v3.png" alt="Na Ordem!">
           <div><span>PAINEL ADMINISTRATIVO</span><strong>Conteúdo do jogo</strong></div>
         </div>
-        <div class="admin-user"><span class="open-access-badge">ACESSO ABERTO</span></div>
+        <div class="admin-user"><span id="admin-identity" style="margin-right:12px;"></span><button id="logout-button" class="ghost-btn" type="button">SAIR</button></div>
       </header>
 
       <div class="admin-shell">
         <aside class="sidebar">
           <button class="nav-btn active" data-tab="characters" type="button"><span>🎭</span><div><strong>Personagens</strong><small>Imagens e disponibilidade</small></div></button>
           <button class="nav-btn" data-tab="themes" type="button"><span>💬</span><div><strong>Temas</strong><small>Cartas usadas nas rodadas</small></div></button>
-          <div class="sidebar-note"><strong>Acesso temporariamente aberto</strong><p>Este painel não exige login nesta fase. Desativar preserva o histórico; excluir remove o item do catálogo.</p></div>
+          <div class="sidebar-note"><strong>Acesso administrativo</strong><p>Somente administradores autorizados podem gerenciar conteúdos. Desativar preserva o histórico; excluir remove o item do catálogo.</p></div>
         </aside>
 
         <section class="content-area">
@@ -38,19 +48,6 @@
             <div class="page-heading">
               <div><span class="eyebrow">PERSONAGENS</span><h1>Biblioteca de personagens</h1><p>Envie novas imagens, altere a ordem e controle quais opções aparecem para os jogadores.</p></div>
               <div class="stat-pill"><strong id="character-count">0</strong><span>cadastrados</span></div>
-            </div>
-
-            <div id="legacy-migration-card" class="editor-card migration-card hidden">
-              <div class="editor-heading"><div><span>⇧ MIGRAÇÃO INICIAL</span><h2>Enviar os personagens atuais para o Storage</h2></div></div>
-              <p class="migration-copy">Existem personagens cadastrados sem imagem no Supabase Storage. Selecione de uma vez os 15 PNGs originais e o painel fará o upload e vinculará cada imagem ao personagem correto.</p>
-              <div class="migration-actions">
-                <label class="upload-field migration-upload">
-                  <input id="legacy-character-files" type="file" accept="image/png,image/jpeg,image/webp" multiple>
-                  <span class="upload-icon">⬆</span>
-                  <span><strong>Selecionar imagens</strong><small id="legacy-files-label">Selecione os arquivos originais</small></span>
-                </label>
-                <button id="migrate-legacy-characters" class="primary-btn" type="button">MIGRAR PARA O STORAGE</button>
-              </div>
             </div>
 
             <div class="editor-card">
@@ -94,6 +91,6 @@
       </div>
     </section>
   </main>
-  <script src="admin.js"></script>
+  <script src="admin.js?v=4.0.0"></script>
 </body>
 </html>

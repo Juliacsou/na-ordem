@@ -4,33 +4,57 @@
   const SUPABASE_KEY = 'sb_publishable_YzKP1wT4fhO-e260P7Px8A_1xc3b-Tr';
   const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
   const $ = id => document.getElementById(id);
-  const CHARACTER_BUCKET = 'order-characters';
+  const MEDIA_URL = 'https://audio.altigames.com.br';
+  const WORKER_URL = 'https://altigames-media-api.julia-correa-souza.workers.dev';
+  function r2Path(path){
+    const value = String(path || '').replace(/^\/+/, '');
+    return value.startsWith('order/') ? value : `order/${value}`;
+  }
+
   const state = { characters:[], themes:[], editingThemeId:null };
-  const INITIAL_CHARACTER_FILES = {
-    '00000000-0000-4000-8000-000000000001':'Angry Chibi in Red Beanie.png',
-    '00000000-0000-4000-8000-000000000002':'Cheerful Golden Retriever Avatar (1).png',
-    '00000000-0000-4000-8000-000000000003':'Chibi Avatar with Heart Sunglasses.png',
-    '00000000-0000-4000-8000-000000000004':'Chibi Axolotl Mascot with Blue Ear Frills.png',
-    '00000000-0000-4000-8000-000000000005':'Chibi Clancy Tactical Avatar.png',
-    '00000000-0000-4000-8000-000000000006':'Chibi Neon-Haired Tuxedo Avatar.png',
-    '00000000-0000-4000-8000-000000000007':'Chibi Space-Bun Avatar in Striped Pullover.png',
-    '00000000-0000-4000-8000-000000000008':'Hooded Bandana Mascot Avatar.png',
-    '00000000-0000-4000-8000-000000000009':'Masked Rebel Avatar with Cyrillic Collar.png',
-    '00000000-0000-4000-8000-000000000010':'Masked Red-Stripe Tactical Avatar.png',
-    '00000000-0000-4000-8000-000000000011':'Mysterious Crimson Hooded Avatar.png',
-    '00000000-0000-4000-8000-000000000012':'Stern Buzz-Cut Military Avatar.png',
-    '00000000-0000-4000-8000-000000000013':'Stern Pink-Haired Chibi Avatar.png',
-    '00000000-0000-4000-8000-000000000014':'Stern Red-Haired Chibi Avatar.png',
-    '00000000-0000-4000-8000-000000000015':'Veiled Crimson Hooded Specter.png'
-  };
+
 
   function escapeHtml(value='') { return String(value).replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
   function message(text,type='success') { const el=$('global-message'); el.textContent=text; el.className=`message ${type}`; el.scrollIntoView({behavior:'smooth',block:'nearest'}); setTimeout(()=>el.classList.add('hidden'),4200); }
   function busy(button,on,label){ if(!button)return; if(on){button.dataset.label=button.textContent;button.textContent=label||'PROCESSANDO...';button.disabled=true;}else{button.textContent=button.dataset.label||button.textContent;button.disabled=false;} }
 
   function publicCharacterUrl(storagePath){
-    if(!storagePath) return '';
-    return db.storage.from(CHARACTER_BUCKET).getPublicUrl(String(storagePath)).data.publicUrl;
+    if (!storagePath) return '';
+    return `${MEDIA_URL}/${r2Path(storagePath)}`;
+  }
+  async function authToken(){
+    const { data, error } = await db.auth.getSession();
+    const token = data?.session?.access_token;
+    if (error || !token) throw new Error('Sessão expirada. Entre novamente no painel.');
+    return token;
+  }
+  async function mediaRequest(url, opts = {}){
+    const token = await authToken();
+    const response = await fetch(url, {
+      ...opts,
+      headers: { ...opts.headers, Authorization: `Bearer ${token}` }
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.success) throw new Error(data.error || `Erro de mídia HTTP ${response.status}`);
+    return data;
+  }
+  async function uploadFileToR2(file){
+    if (!file || file.size <= 0 || file.size > 5 * 1024 * 1024)
+      throw new Error('A imagem deve ter entre 1 byte e 5 MB.');
+    const form = new FormData();
+    form.append('file', file);
+    form.append('game', 'order');
+    const result = await mediaRequest(`${WORKER_URL}/upload`, { method:'POST', body: form });
+    if (!/^order\/characters\/[0-9a-f-]{36}\.(png|jpg|jpeg|webp)$/i.test(result.key || ''))
+      throw new Error('O Worker retornou um caminho inesperado.');
+    return result.key;
+  }
+  function canDeleteFromR2(path){
+    return /^order\/characters\/[0-9a-f-]{36}\.(png|jpg|jpeg|webp)$/i.test(r2Path(path || ''));
+  }
+  async function deleteFileFromR2(path){
+    if (!canDeleteFromR2(path)) return; // originais initial protegidos
+    await mediaRequest(`${WORKER_URL}/file?key=${encodeURIComponent(r2Path(path))}`, { method:'DELETE' });
   }
   async function loadCharacters(){
     $('characters-grid').innerHTML='<div class="loading-card">Carregando personagens...</div>';
@@ -39,7 +63,7 @@
     state.characters=(data||[]).map(c=>({...c,image_url:publicCharacterUrl(c.storage_path)}));
     $('character-count').textContent=state.characters.length;
     const missing=state.characters.filter(c=>!c.storage_path);
-    $('legacy-migration-card').classList.toggle('hidden',missing.length===0);
+
     renderCharacters();
   }
   function renderCharacters(){
@@ -49,24 +73,19 @@
       <span class="character-status">${c.active?'ATIVO':'INATIVO'}</span>
       <div class="order-actions"><button data-move="up" title="Mover para cima" ${i===0?'disabled':''}>↑</button><button data-move="down" title="Mover para baixo" ${i===state.characters.length-1?'disabled':''}>↓</button></div>
       <div class="character-image">${c.storage_path?`<img src="${escapeHtml(c.image_url)}" alt="${escapeHtml(c.name)}">`:'<div class="character-missing-storage">IMAGEM AINDA NÃO ESTÁ NO STORAGE</div>'}</div>
-      <div class="character-meta"><strong title="${escapeHtml(c.name)}">${escapeHtml(c.name)}</strong><span>posição ${i+1}</span><span class="storage-badge ${c.storage_path?'':'missing'}">${c.storage_path?'SUPABASE STORAGE':'SEM IMAGEM'}</span></div>
+      <div class="character-meta"><strong title="${escapeHtml(c.name)}">${escapeHtml(c.name)}</strong><span>posição ${i+1}</span><span class="storage-badge ${c.storage_path?'':'missing'}">${c.storage_path?'CLOUDFLARE R2':'SEM IMAGEM'}</span></div>
       <div class="card-actions"><button class="small-btn" data-action="replace-image">TROCAR IMAGEM</button><button class="small-btn" data-action="rename">RENOMEAR</button><button class="small-btn" data-action="toggle">${c.active?'DESATIVAR':'ATIVAR'}</button><button class="small-btn danger" data-action="delete">EXCLUIR</button></div>
     </article>`).join('');
   }
 
-  async function uploadFileToStorage(file,path=null){
-    if(file.size>5*1024*1024) throw new Error('A imagem deve ter no máximo 5 MB.');
-    const ext=(file.name.split('.').pop()||'png').toLowerCase().replace(/[^a-z0-9]/g,'')||'png';
-    const storagePath=path || `characters/${crypto.randomUUID()}.${ext}`;
-    const {error}=await db.storage.from(CHARACTER_BUCKET).upload(storagePath,file,{cacheControl:'31536000',upsert:true,contentType:file.type||undefined});
-    if(error) throw error;
-    return storagePath;
-  }
   async function uploadCharacter(file,name,active){
-    const storagePath=await uploadFileToStorage(file);
+    const storagePath=await uploadFileToR2(file);
     const nextOrder=(Math.max(0,...state.characters.map(c=>Number(c.sort_order)||0))+1);
     const {error:insertError}=await db.from('order_characters').insert({name,storage_path:storagePath,active,sort_order:nextOrder});
-    if(insertError){ await db.storage.from(CHARACTER_BUCKET).remove([storagePath]); throw insertError; }
+    if(insertError){
+      try { await deleteFileFromR2(storagePath); } catch(cleanupError){ console.error('Falha ao limpar imagem não utilizada:',cleanupError); }
+      throw insertError;
+    }
   }
   function pickImageFile(){
     return new Promise(resolve=>{
@@ -77,27 +96,15 @@
   async function replaceCharacterImage(c){
     const file=await pickImageFile(); if(!file)return;
     const oldPath=c.storage_path||null;
-    const newPath=await uploadFileToStorage(file);
+    const newPath=await uploadFileToR2(file);
     const {error}=await db.from('order_characters').update({storage_path:newPath}).eq('id',c.id);
-    if(error){ await db.storage.from(CHARACTER_BUCKET).remove([newPath]); throw error; }
-    if(oldPath && oldPath!==newPath) await db.storage.from(CHARACTER_BUCKET).remove([oldPath]);
-  }
-  function normalizeFilename(name){ return String(name||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim(); }
-  async function migrateInitialCharacters(files){
-    const selected=[...files];
-    const byName=new Map(selected.map(file=>[normalizeFilename(file.name),file]));
-    const targets=state.characters.filter(c=>!c.storage_path && INITIAL_CHARACTER_FILES[c.id]);
-    if(!targets.length) throw new Error('Não há personagens iniciais pendentes de migração.');
-    const missing=[];
-    for(const c of targets){ if(!byName.has(normalizeFilename(INITIAL_CHARACTER_FILES[c.id]))) missing.push(INITIAL_CHARACTER_FILES[c.id]); }
-    if(missing.length) throw new Error(`Faltam ${missing.length} arquivo(s): ${missing.slice(0,3).join(', ')}${missing.length>3?'...':''}`);
-    for(let i=0;i<targets.length;i++){
-      const c=targets[i]; const file=byName.get(normalizeFilename(INITIAL_CHARACTER_FILES[c.id]));
-      const ext=(file.name.split('.').pop()||'png').toLowerCase().replace(/[^a-z0-9]/g,'')||'png';
-      const path=`characters/initial/${c.id}.${ext}`;
-      await uploadFileToStorage(file,path);
-      const {error}=await db.from('order_characters').update({storage_path:path}).eq('id',c.id);
-      if(error) throw error;
+    if(error){
+      try { await deleteFileFromR2(newPath); } catch(cleanupError){ console.error('Falha ao limpar imagem não utilizada:',cleanupError); }
+      throw error;
+    }
+    // Preservar imagens históricas se houver falha de limpeza.
+    if(oldPath && oldPath!==newPath && canDeleteFromR2(oldPath)){
+      try { await deleteFileFromR2(oldPath); } catch(cleanupError){ console.warn('Imagem antiga permanece no R2:',cleanupError); }
     }
   }
 
@@ -109,7 +116,9 @@
   async function deleteCharacter(c){
     if(!confirm(`Excluir definitivamente "${c.name}"?\n\nSe ele já tiver sido usado por jogadores antigos, o histórico continuará existindo, mas sem vínculo com esse personagem.`))return;
     const {error}=await db.from('order_characters').delete().eq('id',c.id); if(error)throw error;
-    if(c.storage_path) await db.storage.from(CHARACTER_BUCKET).remove([c.storage_path]);
+    if(c.storage_path && canDeleteFromR2(c.storage_path)) {
+      try { await deleteFileFromR2(c.storage_path); } catch(err) { console.warn('Imagem órfã no R2; registro excluído:', err); }
+    }
   }
   async function moveCharacter(c,direction){
     const idx=state.characters.findIndex(x=>x.id===c.id); const swapIdx=direction==='up'?idx-1:idx+1; if(swapIdx<0||swapIdx>=state.characters.length)return;
@@ -139,7 +148,45 @@
     else { const {error}=await db.from('order_themes').insert({text,active}); if(error)throw error; }
   }
 
+  async function isAdmin(){
+    const {data:{user},error}=await db.auth.getUser();
+    if(error || !user) return false;
+    const result=await db.from('altigames_admins').select('user_id').eq('user_id',user.id).limit(1);
+    if(result.error) throw result.error;
+    return result.data?.length === 1;
+  }
   document.addEventListener('DOMContentLoaded', async () => {
+    const loginView=$('login-view');
+    const dashboard=$('dashboard-view');
+    async function showDashboard(){
+      const allowed=await isAdmin();
+      dashboard.classList.toggle('hidden',!allowed);
+      loginView.classList.toggle('hidden',allowed);
+      if(allowed) {
+        $('admin-identity').textContent=(await db.auth.getUser()).data.user?.email||'Administrador';
+        await Promise.all([loadCharacters(),loadThemes()]);
+      } else {
+        $('login-error').textContent='Entre com uma conta administrativa autorizada.';
+      }
+    }
+    $('login-form').addEventListener('submit',async e=>{
+      e.preventDefault();
+      const button=$('login-button'); busy(button,true,'ENTRANDO...');
+      $('login-error').textContent='';
+      try {
+        const {error}=await db.auth.signInWithPassword({email:$('login-email').value.trim(),password:$('login-password').value});
+        if(error) throw error;
+        const authorized=await isAdmin();
+        if(!authorized){await db.auth.signOut();throw new Error('Conta sem permissão de administrador.');}
+        await showDashboard();
+      } catch(error){$('login-error').textContent=error.message||'Não foi possível entrar.';}
+      finally{busy(button,false);}
+    });
+    $('logout-button').addEventListener('click',async()=>{await db.auth.signOut();dashboard.classList.add('hidden');loginView.classList.remove('hidden');$('login-password').value='';});
+    try{await showDashboard();}catch(error){
+      dashboard.classList.add('hidden');loginView.classList.remove('hidden');$('login-error').textContent=error.message||'Erro ao verificar permissões.';
+    }
+
     document.querySelectorAll('[data-tab]').forEach(btn => btn.addEventListener('click', () => {
       document.querySelectorAll('[data-tab]').forEach(b => b.classList.toggle('active', b === btn));
       $('characters-tab').classList.toggle('hidden', btn.dataset.tab !== 'characters');
@@ -198,18 +245,6 @@
     });
 
     $('refresh-characters').addEventListener('click', loadCharacters);
-    $('legacy-character-files').addEventListener('change',()=>{
-      const count=$('legacy-character-files').files?.length||0;
-      $('legacy-files-label').textContent=count?`${count} arquivo(s) selecionado(s)`:'Selecione os arquivos originais';
-    });
-    $('migrate-legacy-characters').addEventListener('click',async()=>{
-      const files=$('legacy-character-files').files;
-      if(!files?.length){ message('Selecione os arquivos dos personagens antes de migrar.','error'); return; }
-      const btn=$('migrate-legacy-characters'); busy(btn,true,'MIGRANDO...');
-      try{ await migrateInitialCharacters(files); $('legacy-character-files').value=''; $('legacy-files-label').textContent='Selecione os arquivos originais'; await loadCharacters(); message('Personagens migrados para o Supabase Storage.'); }
-      catch(err){ message(err.message||'Não foi possível concluir a migração.','error'); }
-      finally{ busy(btn,false); }
-    });
     $('theme-text').addEventListener('input', updateThemeCount);
 
     $('theme-form').addEventListener('submit', async e => {
@@ -262,6 +297,5 @@
     });
 
     $('refresh-themes').addEventListener('click', loadThemes);
-    await Promise.all([loadCharacters(), loadThemes()]);
   });
 })();

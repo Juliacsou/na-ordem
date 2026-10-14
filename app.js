@@ -8,7 +8,7 @@
   });
 
   const LEGACY_PLAYER_COLOR = '#7854ff';
-  const CHARACTER_BUCKET = 'order-characters';
+  const MEDIA_URL = 'https://audio.altigames.com.br';
 
   const FALLBACK_THEMES = [
     'Quanto % esta seu celular','Quanto tempo passou no instagram hoje em minutos','quantos anos você tinha quando perdeu o BV?',
@@ -169,7 +169,8 @@
   function updatePlayerLeaveButton(){ const btn=$('player-leave-button'); if(btn) btn.classList.toggle('hidden', !(state.mode==='player' && state.player)); }
   function publicCharacterUrl(storagePath){
     if(!storagePath) return '';
-    return db.storage.from(CHARACTER_BUCKET).getPublicUrl(String(storagePath)).data.publicUrl;
+    const path=String(storagePath).replace(/^\/+/, '');
+    return `${MEDIA_URL}/${path.startsWith('order/') ? path : `order/${path}`}`;
   }
   function normalizeCharacter(row){
     if(!row?.id || !row?.storage_path) return null;

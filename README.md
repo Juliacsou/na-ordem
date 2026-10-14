@@ -1,3 +1,26 @@
+# Na Ordem! — v4.0.0 (Cloudflare R2)
+
+- Personagens carregam pelo Cloudflare R2 em `https://audio.altigames.com.br/order/...`.
+- Caminhos antigos (`characters/initial/...`) continuam válidos sem SQL; caminhos novos (`order/characters/...`) também.
+- Painel: login Supabase Auth + verificação `altigames_admins`.
+- Upload, troca e limpeza de imagens novas pelo Worker `altigames-media-api`; PNG/JPG/WebP até 5 MB.
+- Imagens históricas em `order/characters/initial/` preservadas, inclusive quando um personagem é excluído ou recebe nova imagem.
+- Sem alterações nas regras da partida, multiplayer, temas ou banco.
+- Publicar arquivos do conteúdo de `na-ordem/` na raiz do repositório GitHub Pages.
+- Domínio previsto: https://naordem.altigames.com.br
+
+## Atenção antes de disponibilizar o painel
+
+A interface exige login, **mas não substitui as políticas de segurança (RLS) do Supabase**. Verifique se `order_characters` e `order_themes` permitem gravação apenas para usuários autenticados autorizados em `altigames_admins`. Se as políticas antigas concedem escrita a `anon`, qualquer pessoa com a chave pública pode fazer alterações via API apesar da tela de login. Não remova as permissões necessárias ao multiplayer das demais tabelas.
+
+## Validação sugerida
+
+1. Abrir o jogo e verificar se os 15 avatares aparecem, com requisições de imagem ao R2.
+2. Entrar no `admin.html` como administrador, verificar temas e personagens.
+3. Criar um personagem de teste (imagem vai para `order/characters/<uuid>.png` no R2).
+4. Trocar imagem e excluir o personagem de teste; conferir registro e arquivo.
+5. Confirmar partida em modo local e online.
+6. Só depois considerar apagar as 15 imagens do Storage antigo.
 # Na Ordem! — v3.9.3
 
 - Ordenação e resultado na mesma tela de lista vertical; não existe mais tela horizontal de resultado.
